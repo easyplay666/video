@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-B 视频播放器 V3 (微调增强版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+    
+    <style>
+        .plyr { height: 100%; max-height: 70vh; border-radius: 0.75rem; --plyr-color-main: #2563eb; }
+        body { background-color: #0f172a; color: #f8fafc; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <div class="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
+        
+        <div class="bg-gray-800 p-4 rounded-xl shadow-lg flex gap-4 items-center">
+            <div class="flex bg-gray-700 rounded-lg p-1 shrink-0">
+                <button onclick="switchMode('youtube')" id="tab-yt" class="px-4 py-2 rounded-md text-sm font-bold bg-blue-600 transition-all">YouTube</button>
+                <button onclick="switchMode('local')" id="tab-local" class="px-4 py-2 rounded-md text-sm font-bold text-gray-400 hover:text-white transition-all">本地视频</button>
+            </div>
+
+            <div id="input-youtube" class="flex-1 flex gap-2">
+                <input type="text" id="yt-url" placeholder="粘贴 YouTube 网址" 
+                       class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 font-mono text-sm">
+                <button onclick="loadYouTube()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-bold shadow-lg">播放</button>
+            </div>
+
+            <div id="input-local" class="flex-1 hidden">
+                <input type="file" id="local-file" accept="video/*" class="block w-full text-sm text-gray-400
+                  file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                  file:text-sm file:font-semibold file:bg-blue-600 file:text-white
+                  hover:file:bg-blue-500 cursor-pointer"/>
+            </div>
+        </div>
+
+        <div class="w-full bg-black rounded-xl shadow-2xl relative group aspect-video flex justify-center items-center overflow-hidden border border-gray-700">
+            <video id="player" playsinline controls class="w-full h-full"></video>
+            
+            <div id="loop-indicator" class="absolute top-4 right-4 bg-blue-600/90 px-3 py-1 rounded text-xs font-bold hidden backdrop-blur-md shadow-lg z-50 animate-pulse">
+                🔄 循环中
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4">
+            
+            <div class="col-span-5 flex flex-col gap-1">
+                <button onclick="setA()" id="btn-a" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-xl text-xl font-bold border-l-4 border-transparent transition-all shadow-md active:scale-95 relative group">
+                    <span id="text-a">🅰️ 设起点 (A)</span>
+                    <span class="absolute right-2 bottom-2 text-xs text-blue-300 opacity-0 group-hover:opacity-100 transition">点击更新</span>
+                </button>
+                <button onclick="clearPoint('a')" class="w-full py-1 text-xs text-gray-500 hover:text-red-400 bg-gray-800 rounded hover:bg-gray-700 transition">
+                    🗑️ 清除 A点
+                </button>
+            </div>
+
+            <div class="col-span-5 flex flex-col gap-1">
+                <button onclick="setB()" id="btn-b" disabled class="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-xl text-xl font-bold border-l-4 border-transparent transition-all shadow-md opacity-50 cursor-not-allowed active:scale-95 relative group">
+                    <span id="text-b">🅱️ 设终点 (B)</span>
+                    <span class="absolute right-2 bottom-2 text-xs text-blue-300 opacity-0 group-hover:opacity-100 transition">点击更新</span>
+                </button>
+                <button onclick="clearPoint('b')" class="w-full py-1 text-xs text-gray-500 hover:text-red-400 bg-gray-800 rounded hover:bg-gray-700 transition">
+                    🗑️ 清除 B点
+                </button>
+            </div>
+
+            <div class="col-span-2 flex flex-col gap-2">
+                 <button onclick="clearAll()" class="bg-red-900/40 hover:bg-red-800 text-red-200 py-2 rounded-lg text-sm font-bold shadow-md active:scale-95 h-1/2">
+                    ❌ 全清
+                </button>
+                
+                <div class="bg-gray-800 rounded-lg flex items-center justify-center relative group cursor-pointer hover:bg-gray-700 transition h-1/2">
+                    <select id="speed-select" onchange="changeSpeed(this.value)" class="bg-transparent text-white font-bold text-sm text-center outline-none cursor-pointer appearance-none w-full h-full absolute inset-0 z-10">
+                        <option value="0.5" class="bg-gray-800">0.5x</option>
+                        <option value="0.75" class="bg-gray-800">0.75x</option>
+                        <option value="1.0" selected class="bg-gray-800">1.0x</option>
+                        <option value="1.25" class="bg-gray-800">1.25x</option>
+                        <option value="1.5" class="bg-gray-800">1.5x</option>
+                        <option value="2.0" class="bg-gray-800">2.0x</option>
+                    </select>
+                    <div class="text-sm font-bold pointer-events-none z-0" id="speed-display">1.0x</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center text-xs text-gray-500 mt-2">
+            提示：在循环中，再次点击 A 或 B 可直接更新时间，不会打断循环。
+        </div>
+    </div>
+
+    <div class="w-80 bg-gray-900 border-l border-gray-800 flex flex-col shadow-2xl z-20">
+        <div class="p-4 border-b border-gray-800 bg-gray-900 flex justify-between items-center">
+            <h2 class="text-sm font-bold text-gray-300">📜 播放历史</h2>
+            <button onclick="clearHistory()" class="text-xs text-gray-600 hover:text-red-400">清空</button>
+        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
+    </div>
+
+    <script>
+        let player = null;
+        let loopA = null;
+        let loopB = null;
+        let currentMode = 'youtube';
+        let historyData = JSON.parse(localStorage.getItem('video_ab_history_v3')) || [];
+        let currentMedia = { id: null, title: null, type: null };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            player = new Plyr('#player', {
+                controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+                keyboard: { focused: true, global: true },
+                speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+                youtube: { noCookie: true, rel: 0, showinfo: 0, iv_load_policy: 3, modestbranding: 1 }
+            });
+
+            // === 核心循环逻辑 V3 ===
+            player.on('timeupdate', () => {
+                // 只有当 A 和 B 都存在，且 B > A 时才循环
+                if (loopA !== null && loopB !== null && loopB > loopA) {
+                    // 增加 0.2s 缓冲，体验更丝滑
+                    if (player.currentTime >= loopB || player.currentTime < loopA - 0.5) {
+                        player.currentTime = loopA;
+                        player.play().catch(()=>{});
+                    }
+                }
+                if (Math.floor(player.currentTime) % 5 === 0) saveHistory();
+            });
+
+            player.on('ratechange', () => {
+                 document.getElementById('speed-display').innerText = player.speed + 'x';
+                 document.getElementById('speed-select').value = player.speed;
+            });
+
+            renderHistoryUI();
+        });
+
+        // === 逻辑优化：智能设置 A 点 ===
+        function setA() {
+            const t = player.currentTime;
+            
+            // 如果 B 已经存在
+            if (loopB !== null) {
+                if (t < loopB) {
+                    // 情况1：新的 A 在 B 之前（合法微调） -> 更新 A，保持 B，保持循环
+                    loopA = t;
+                    // 不做任何清除操作
+                } else {
+                    // 情况2：新的 A 比 B 还大（不合法） -> 更新 A，必须清除 B
+                    loopA = t;
+                    loopB = null; 
+                    // 此时循环自然暂停，等待设置新 B
+                }
+            } else {
+                // B 不存在，直接设 A
+                loopA = t;
+            }
+            
+            updateUI();
+            saveHistory();
+        }
+
+        // === 逻辑优化：智能设置 B 点 ===
+        function setB() {
+            if (loopA === null) {
+                // 如果没有 A，先不让设 B (或者你可以改成自动设 A 为 0)
+                return alert("请先设置起点 A");
+            }
+
+            const t = player.currentTime;
+            
+            if (t > loopA) {
+                // 情况1：B 在 A 之后（合法） -> 更新 B，立即循环
+                loopB = t;
+                // 立即跳回 A 验证循环
+                player.currentTime = loopA;
+                player.play();
+            } else {
+                // 情况2：B 在 A 之前（不合法） -> 可能是点错了，交换 A B？
+                // 这里我们简单处理：只更新 B，但因为 B < A，循环逻辑会暂时失效，直到你修正 A
+                // 或者我们可以把现在的 A 变成 B，现在的 t 变成 A
+                const oldA = loopA;
+                loopA = t;
+                loopB = oldA;
+                // 立即播放
+                player.currentTime = loopA;
+                player.play();
+            }
+
+            updateUI();
+            saveHistory();
+        }
+
+        function clearPoint(point) {
+            if (point === 'a') loopA = null;
+            if (point === 'b') loopB = null;
+            updateUI();
+            saveHistory();
+        }
+
+        function clearAll() {
+            loopA = null;
+            loopB = null;
+            updateUI();
+            saveHistory();
+        }
+
+        function updateUI() {
+            const btnA = document.getElementById('btn-a');
+            const btnB = document.getElementById('btn-b');
+            const txtA = document.getElementById('text-a');
+            const txtB = document.getElementById('text-b');
+            const indicator = document.getElementById('loop-indicator');
+
+            // 更新 A 按钮状态
+            if (loopA !== null) {
+                txtA.innerHTML = `<span class="text-xs opacity-60">起点</span><br>${formatTime(loopA)}`;
+                btnA.classList.add('bg-blue-600', 'border-blue-300');
+                btnA.classList.remove('bg-gray-700', 'border-transparent');
+                // 激活 B
+                btnB.disabled = false;
+                btnB.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                txtA.innerText = "🅰️ 设起点 (A)";
+                btnA.classList.add('bg-gray-700', 'border-transparent');
+                btnA.classList.remove('bg-blue-600', 'border-blue-300');
+                // 禁用 B (如果没有 A，通常不设 B)
+                btnB.disabled = true;
+                btnB.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // 更新 B 按钮状态
+            if (loopB !== null) {
+                txtB.innerHTML = `<span class="text-xs opacity-60">终点</span><br>${formatTime(loopB)}`;
+                btnB.classList.add('bg-blue-600', 'border-blue-300');
+                btnB.classList.remove('animate-pulse'); // 只有在待设置时闪烁？或者保持高亮
+            } else {
+                txtB.innerText = "🅱️ 设终点 (B)";
+                btnB.classList.remove('bg-blue-600', 'border-blue-300');
+                if (loopA !== null) btnB.classList.add('animate-pulse'); // 提示去点 B
+            }
+
+            // 循环状态指示器
+            if (loopA !== null && loopB !== null && loopB > loopA) {
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
+        }
+
+        // === 基础功能保持不变 ===
+        function switchMode(mode) {
+            currentMode = mode;
+            const btnYt = document.getElementById('tab-yt');
+            const btnLocal = document.getElementById('tab-local');
+            const inputYt = document.getElementById('input-youtube');
+            const inputLocal = document.getElementById('input-local');
+
+            if (mode === 'youtube') {
+                btnYt.className = "px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white shadow-lg";
+                btnLocal.className = "px-4 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-white";
+                inputYt.classList.remove('hidden'); inputYt.classList.add('flex');
+                inputLocal.classList.add('hidden');
+            } else {
+                btnLocal.className = "px-4 py-2 rounded-md text-sm font-bold bg-blue-600 text-white shadow-lg";
+                btnYt.className = "px-4 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-white";
+                inputLocal.classList.remove('hidden');
+                inputYt.classList.remove('flex'); inputYt.classList.add('hidden');
+            }
+        }
+
+        function loadYouTube(urlOverride = null, startAt = 0, loopPoints = null) {
+            const url = urlOverride || document.getElementById('yt-url').value;
+            if (!url) return alert("请输入 YouTube 网址");
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            
+            if (match && match[2].length === 11) {
+                const videoId = match[2];
+                player.source = { type: 'video', sources: [{ src: videoId, provider: 'youtube' }] };
+                currentMedia = { id: videoId, title: `YouTube (${videoId})`, type: 'youtube' };
+                clearAll();
+                setTimeout(() => { const poster = document.querySelector('.plyr__poster'); if(poster) poster.style.display = 'none'; }, 1000);
+                player.once('ready', () => {
+                    if (startAt > 0) player.currentTime = startAt;
+                    if (loopPoints) { loopA = loopPoints.a; loopB = loopPoints.b; updateUI(); }
+                    saveHistory();
+                });
+            } else { alert("无效链接"); }
+        }
+
+        document.getElementById('local-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            player.source = { type: 'video', sources: [{ src: url, type: file.type || 'video/mp4' }] };
+            currentMedia = { id: file.name, title: file.name, type: 'local' };
+            clearAll();
+            const saved = historyData.find(h => h.id === file.name && h.type === 'local');
+            player.once('ready', () => {
+                if (saved) {
+                    player.currentTime = saved.timestamp;
+                    if (saved.loop) { loopA = saved.loop.a; loopB = saved.loop.b; updateUI(); }
+                    player.play().catch(()=>{});
+                }
+                saveHistory();
+            });
+        });
+
+        function changeSpeed(val) { player.speed = parseFloat(val); }
+
+        function saveHistory() {
+            if (!currentMedia.id) return;
+            const record = {
+                id: currentMedia.id, title: currentMedia.title, type: currentMedia.type,
+                timestamp: player.currentTime,
+                loop: (loopA && loopB) ? { a: loopA, b: loopB } : null,
+                date: new Date().getTime()
+            };
+            const index = historyData.findIndex(h => h.id === record.id && h.type === record.type);
+            if (index > -1) historyData.splice(index, 1);
+            historyData.unshift(record);
+            if (historyData.length > 20) historyData.pop();
+            localStorage.setItem('video_ab_history_v3', JSON.stringify(historyData));
+            renderHistoryUI();
+        }
+
+        function renderHistoryUI() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            if (historyData.length === 0) return list.innerHTML = '<div class="text-center text-gray-600 mt-10 text-xs">暂无记录</div>';
+            historyData.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-gray-800 hover:bg-gray-700 p-3 rounded-lg cursor-pointer transition-all border border-gray-700 hover:border-blue-500 group";
+                const isYt = item.type === 'youtube';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold px-1.5 py-0.5 rounded ${isYt ? 'bg-red-900 text-red-200' : 'bg-blue-900 text-blue-200'}">${isYt ? 'YT' : 'FILE'}</span><div class="text-xs font-bold text-gray-300 truncate flex-1">${item.title}</div></div>
+                    <div class="flex justify-between items-end"><div class="text-[10px] text-gray-500">进度: <span class="text-blue-400 font-mono">${formatTime(item.timestamp)}</span></div>${item.loop ? '<span class="text-[10px] bg-green-900 text-green-300 px-1 rounded">A-B</span>' : ''}</div>
+                `;
+                div.onclick = () => restoreHistory(item);
+                list.appendChild(div);
+            });
+        }
+
+        function restoreHistory(item) {
+            if (item.type === 'youtube') {
+                switchMode('youtube'); document.getElementById('yt-url').value = `https://youtu.be/${item.id}`;
+                loadYouTube(null, item.timestamp, item.loop);
+            } else {
+                switchMode('local'); alert(`请重新选择文件：\n${item.id}`);
+                const box = document.getElementById('input-local'); box.classList.add('ring-2', 'ring-blue-500'); setTimeout(() => box.classList.remove('ring-2', 'ring-blue-500'), 2000);
+            }
+        }
+
+        function clearHistory() { if(confirm('清空所有？')) { localStorage.removeItem('video_ab_history_v3'); historyData = []; renderHistoryUI(); } }
+        function formatTime(s) { if (!s) return "0:00"; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.code === 'ArrowLeft') setA();
+            if (e.code === 'ArrowRight') setB();
+            if (e.code === 'Escape') clearAll();
+        });
+    </script>
+</body>
+</html>
