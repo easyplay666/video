@@ -2,18 +2,18 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>HTML 视频录制（专业版）</title>
+<title>HTML 视频录制（修复版）</title>
 
 <style>
   body { font-family: Arial; text-align: center; margin-top: 20px; }
   canvas { border: 1px solid #ccc; }
-  select, button { margin: 5px; padding: 8px 12px; }
+  button, select, input { margin: 5px; padding: 6px 10px; }
 </style>
 </head>
 
 <body>
 
-<h2>HTML 视频录制（支持暂停 / 尺寸 / 虚拟背景）</h2>
+<h2>HTML 视频录制（暂停 / 尺寸 / 可换背景）</h2>
 
 <video id="camera" autoplay muted playsinline style="display:none"></video>
 <canvas id="canvas"></canvas>
@@ -24,11 +24,13 @@
   <option value="portrait">手机竖屏 (9:16)</option>
 </select>
 
-<select id="background">
+<select id="bgMode">
   <option value="none">无背景</option>
   <option value="color">纯色背景</option>
   <option value="image">图片背景</option>
 </select>
+
+<input type="file" id="bgUpload" accept="image/*">
 
 <br>
 
@@ -39,16 +41,13 @@
 <button id="stop" disabled>停止</button>
 
 <script>
-let stream, recorder, chunks = [];
 const video = document.getElementById("camera");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-const format = document.getElementById("format");
-const bgSelect = document.getElementById("background");
-
+let stream, recorder, chunks = [];
 let bgImage = new Image();
-bgImage.src = "https://picsum.photos/1280/720"; // 示例背景
+let drawing = false;
 
 function setCanvasSize() {
   if (format.value === "portrait") {
@@ -61,46 +60,62 @@ function setCanvasSize() {
 }
 
 function draw() {
+  if (!drawing) return;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // 背景
-  if (bgSelect.value === "color") {
+  if (bgMode.value === "color") {
     ctx.fillStyle = "#2c3e50";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else if (bgSelect.value === "image") {
+  } else if (bgMode.value === "image" && bgImage.src) {
     ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
   }
 
-  // 人像视频（居中）
-  const scale = Math.min(
-    canvas.width / video.videoWidth,
-    canvas.height / video.videoHeight
-  );
+  // 人像视频
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
 
-  const w = video.videoWidth * scale;
-  const h = video.videoHeight * scale;
+  if (vw && vh) {
+    const scale = Math.min(canvas.width / vw, canvas.height / vh);
+    const w = vw * scale;
+    const h = vh * scale;
 
-  ctx.drawImage(
-    video,
-    (canvas.width - w) / 2,
-    (canvas.height - h) / 2,
-    w,
-    h
-  );
+    ctx.drawImage(
+      video,
+      (canvas.width - w) / 2,
+      (canvas.height - h) / 2,
+      w,
+      h
+    );
+  }
 
   requestAnimationFrame(draw);
 }
 
+// 上传背景图
+document.getElementById("bgUpload").onchange = e => {
+  const file = e.target.files[0];
+  if (file) {
+    bgImage.src = URL.createObjectURL(file);
+  }
+};
+
+// 开启摄像头
 document.getElementById("init").onclick = async () => {
   stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   video.srcObject = stream;
 
+  await video.play(); // ⭐ 关键修复点
+
   setCanvasSize();
+  drawing = true;
   draw();
 
   document.getElementById("start").disabled = false;
 };
 
+// 开始录制
 document.getElementById("start").onclick = () => {
   const canvasStream = canvas.captureStream(30);
   stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
@@ -112,28 +127,20 @@ document.getElementById("start").onclick = () => {
     const blob = new Blob(chunks, { type: "video/webm" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "video.webm";
+    a.download = "recorded-video.webm";
     a.click();
     chunks = [];
   };
 
   recorder.start();
-  document.getElementById("pause").disabled = false;
-  document.getElementById("stop").disabled = false;
+  pause.disabled = false;
+  stop.disabled = false;
 };
 
-document.getElementById("pause").onclick = () => {
-  recorder.pause();
-  document.getElementById("resume").disabled = false;
-};
-
-document.getElementById("resume").onclick = () => {
-  recorder.resume();
-};
-
-document.getElementById("stop").onclick = () => {
-  recorder.stop();
-};
+// 暂停 / 继续
+pause.onclick = () => recorder.pause();
+resume.onclick = () => recorder.resume();
+stop.onclick = () => recorder.stop();
 </script>
 
 </body>
