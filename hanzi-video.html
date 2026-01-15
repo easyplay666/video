@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字笔顺视频生成器 (支持标点)</title>
+    <title>汉字笔顺视频生成器 (带语音读音版)</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -15,7 +15,6 @@
         button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
         button:disabled { background: #666; }
 
-        /* YouTube 16:9 舞台 */
         #recording-stage {
             width: 854px; height: 480px;
             background: white; color: #333;
@@ -28,10 +27,9 @@
         #full-fr { font-size: 20px; color: #666; margin-top: 5px; }
         
         #writer-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-content: flex-start; }
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 60px; position: relative; }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 60px; }
         .pinyin-label { color: #e74c3c; font-size: 14px; font-weight: bold; height: 20px; margin-bottom: 2px; }
         .writer-div { width: 50px; height: 50px; background: #fafafa; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
-        /* 标点符号的特殊样式 */
         .symbol-style { font-size: 36px; font-weight: bold; color: #333; }
 
         #status-msg { margin-top: 10px; color: #aaa; }
@@ -43,7 +41,7 @@
 <div class="controls">
     <input type="text" id="cnInput" placeholder="输入中文..." value="你好，世界！">
     <input type="text" id="frInput" placeholder="输入法语..." value="Bonjour, le monde !">
-    <button id="startBtn">生成视频</button>
+    <button id="startBtn">开始生成(带朗读)</button>
 </div>
 
 <div id="recording-stage">
@@ -64,6 +62,17 @@
     const statusMsg = document.getElementById('status-msg');
     const downloadLink = document.getElementById('download-link');
 
+    // 朗读函数
+    function speak(text) {
+        return new Promise((resolve) => {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.8; // 语速稍微慢一点点，听得更清楚
+            utterance.onend = resolve;
+            window.speechSynthesis.speak(utterance);
+        });
+    }
+
     async function generateVideo() {
         const cn = document.getElementById('cnInput').value;
         const fr = document.getElementById('frInput').value;
@@ -71,7 +80,7 @@
 
         startBtn.disabled = true;
         downloadLink.style.display = "none";
-        statusMsg.innerText = "初始化中...";
+        statusMsg.innerText = "准备录制与朗读...";
         
         document.getElementById('full-cn').innerText = cn;
         document.getElementById('full-fr').innerText = fr;
@@ -81,12 +90,10 @@
         const chars = cn.split('');
         const writers = [];
 
-        // 1. 预处理所有字符
+        // 1. 预处理
         chars.forEach((char, i) => {
             const unit = document.createElement('div');
             unit.className = 'char-unit';
-            
-            // 判断是否是汉字（简单正则：匹配中文字符）
             const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
             const py = isHanzi ? pinyin(char, { toneType: 'symbol' }) : "";
 
@@ -101,15 +108,14 @@
                 const writer = HanziWriter.create(`hz-${i}`, char, {
                     width: 50, height: 50, padding: 5, strokeAnimationSpeed: 2, strokeColor: '#333'
                 });
-                writers.push({ type: 'hanzi', instance: writer });
+                writers.push({ type: 'hanzi', char: char, instance: writer });
             } else {
-                // 如果是标点符号，先隐藏它，等到动画轮到它时再显示
                 target.innerHTML = `<span class="symbol-style" style="visibility: hidden;">${char}</span>`;
                 writers.push({ type: 'symbol', char: char, element: target.firstChild });
             }
         });
 
-        // 2. 设置视频录制
+        // 2. 录制设置 (注意：录屏不包含系统声音，下载的视频只有画面)
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 854; canvas.height = 480;
@@ -120,7 +126,7 @@
         recorder.onstop = () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
             downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = "lesson.webm";
+            downloadLink.download = "lesson_with_audio.webm";
             downloadLink.style.display = "block";
             statusMsg.innerText = "生成完毕！";
             startBtn.disabled = false;
@@ -128,26 +134,40 @@
 
         recorder.start();
         
-        // 渲染帧的函数
         const renderFrame = async () => {
             const tempCanvas = await html2canvas(stage, { scale: 1, logging: false });
             ctx.drawImage(tempCanvas, 0, 0, 854, 480);
         };
 
-        // 3. 执行顺序动画
+        // 3. 执行顺序动画 + 朗读
+        
+        // 第一阶段：整体读一遍
+        statusMsg.innerText = "正在整体朗读...";
+        await speak(cn);
+        await renderFrame(); 
+
+        // 第二阶段：逐字书写并朗读
+        statusMsg.innerText = "正在逐字演示...";
         for (let item of writers) {
             if (item.type === 'hanzi') {
+                // 异步执行朗读，不阻塞动画开始
+                speak(item.char); 
+                
                 const timer = setInterval(renderFrame, 60);
                 await item.instance.animateCharacter();
                 clearInterval(timer);
             } else {
-                // 如果是标点，直接变可见
                 item.element.style.visibility = "visible";
-                // 停留一小会儿让录制器抓拍到
-                for(let j=0; j<5; j++) await renderFrame(); 
+                for(let j=0; j<8; j++) await renderFrame(); 
             }
-            await renderFrame(); // 确保最后一帧被捕捉
+            await renderFrame();
+            await new Promise(r => setTimeout(r, 300)); // 每个字写完稍微停一下
         }
+
+        // 第三阶段：最后整体再读一遍
+        statusMsg.innerText = "最后整体复习朗读...";
+        await speak(cn);
+        for(let j=0; j<10; j++) await renderFrame(); 
 
         setTimeout(() => recorder.stop(), 500);
     }
