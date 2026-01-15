@@ -18,44 +18,55 @@
         #ui-controls { 
             background: #333; padding: 15px; width: 100%; 
             display: flex; justify-content: center; align-items: center; gap: 15px; 
-            box-sizing: border-box; z-index: 100; flex-wrap: wrap;
+            box-sizing: border-box; z-index: 1000; flex-wrap: wrap;
         }
-        .input-box { display: flex; gap: 10px; }
-        input { width: 250px; padding: 10px; border: none; border-radius: 4px; font-size: 14px; }
-        
-        /* 比例切换按钮 */
         .ratio-selector { display: flex; gap: 5px; background: #444; padding: 5px; border-radius: 6px; }
         .ratio-btn { 
             padding: 8px 15px; cursor: pointer; border-radius: 4px; border: none; 
             background: transparent; color: #ccc; font-size: 13px; transition: 0.3s;
         }
         .ratio-btn.active { background: #666; color: white; }
-
+        input { width: 200px; padding: 10px; border: none; border-radius: 4px; font-size: 14px; }
         #startBtn { padding: 10px 20px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
-        
-        /* 录制舞台容器 (外层溢出处理) */
+
+        /* 录制舞台容器 */
         #stage-container {
-            margin: 20px;
-            display: flex; justify-content: center; align-items: center;
-            overflow: auto; max-width: 95vw;
+            margin: 20px auto;
+            display: flex; justify-content: center; align-items: flex-start;
         }
 
-        /* 录制舞台主体 */
         #recording-stage {
             background-color: var(--paper);
             background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
             color: #2c3e50;
             display: flex; flex-direction: column; 
             padding: 40px; box-sizing: border-box;
-            position: relative; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: center top;
+            position: relative; transition: width 0.3s, height 0.3s;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
 
-        /* 比例尺寸定义 */
-        .mode-youtube { width: 1280px; height: 720px; }
-        .mode-mobile { width: 720px; height: 1280px; padding: 80px 40px !important; }
+        /* 核心：定义两种比例的样式 */
+        .mode-youtube { width: 854px; height: 480px; } /* 缩放显示，录制时会拉伸到1280x720 */
+        .mode-mobile { width: 405px; height: 720px; }  /* 缩放显示，录制时会拉伸到720x1280 */
 
-        /* Logo 样式 */
+        /* 录制全屏锁定逻辑 */
+        body.is-recording #ui-controls { display: none; }
+        body.is-recording #recording-stage {
+            position: fixed; top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            z-index: 500; border-radius: 0;
+            display: flex; flex-direction: column;
+            justify-content: center;
+        }
+
+        /* 手机模式下的特殊排版调整 */
+        body.is-mobile-mode #writer-grid {
+            flex-direction: row;
+            flex-wrap: wrap;
+            max-width: 90%;
+            margin: 0 auto;
+        }
+
         #logo-area {
             position: absolute; top: 30px; left: 30px;
             display: flex; align-items: center; gap: 10px;
@@ -65,22 +76,16 @@
         .logo-cn { font-size: 16px; font-weight: bold; color: #1a1a1a; }
         .logo-fr { font-size: 10px; color: var(--accent); text-transform: uppercase; }
 
-        /* 录制状态切换 */
-        body.is-recording #ui-controls { display: none; }
-        body.is-recording #recording-stage { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 500; }
-
-        #header-area { border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 20px; margin-bottom: 30px; margin-top: 40px; text-align: center; }
-        #full-cn { font-size: 38px; font-weight: bold; color: #1a1a1a; }
-        #full-fr { font-size: 22px; color: #5d6d7e; margin-top: 10px; font-style: italic; }
+        #header-area { border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 20px; margin-bottom: 30px; margin-top: 50px; text-align: center; }
+        #full-cn { font-size: 32px; font-weight: bold; color: #1a1a1a; }
+        #full-fr { font-size: 20px; color: #5d6d7e; margin-top: 8px; font-style: italic; }
         
-        #writer-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-content: center; flex-grow: 1; }
+        #writer-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-content: center; flex-grow: 1; }
 
-        /* 下载按钮 */
-        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; padding: 12px 20px; color: white; border-radius: 8px; font-weight: bold; text-decoration: none; display: none; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; padding: 12px 20px; color: white; border-radius: 8px; font-weight: bold; text-decoration: none; display: none; z-index: 1001; }
 
-        /* 字符单位 */
         .char-unit { display: flex; flex-direction: column; align-items: center; transition: all 0.3s; }
-        .pinyin-label { color: var(--accent); font-weight: bold; margin-bottom: 5px; text-align: center; }
+        .pinyin-label { color: var(--accent); font-weight: bold; margin-bottom: 4px; text-align: center; }
         .writer-div { background: rgba(255,255,255,0.2); border-radius: 4px; }
         .symbol-style { font-weight: bold; color: #333; }
     </style>
@@ -89,14 +94,12 @@
 
 <div id="ui-controls">
     <div class="ratio-selector">
-        <button class="ratio-btn active" onclick="setMode('youtube')">YouTube (16:9)</button>
-        <button class="ratio-btn" onclick="setMode('mobile')">手机竖屏 (9:16)</button>
+        <button id="btn-youtube" class="ratio-btn active" onclick="setMode('youtube')">YouTube (16:9)</button>
+        <button id="btn-mobile" class="ratio-btn" onclick="setMode('mobile')">手机竖屏 (9:16)</button>
     </div>
-    <div class="input-box">
-        <input type="text" id="cnInput" value="快乐学中文">
-        <input type="text" id="frInput" value="Apprendre le Chinois avec Joie">
-    </div>
-    <button id="startBtn">开始制作视频</button>
+    <input type="text" id="cnInput" value="快乐学中文">
+    <input type="text" id="frInput" value="Apprendre le Chinois avec Joie">
+    <button id="startBtn">开始制作</button>
 </div>
 
 <div id="stage-container">
@@ -125,16 +128,17 @@
     const stage = document.getElementById('recording-stage');
     let currentMode = 'youtube';
 
-    // 切换版本模式
     function setMode(mode) {
         currentMode = mode;
-        document.querySelectorAll('.ratio-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
+        document.getElementById('btn-youtube').classList.toggle('active', mode === 'youtube');
+        document.getElementById('btn-mobile').classList.toggle('active', mode === 'mobile');
         
         if(mode === 'youtube') {
             stage.className = 'mode-youtube';
+            document.body.classList.remove('is-mobile-mode');
         } else {
             stage.className = 'mode-mobile';
+            document.body.classList.add('is-mobile-mode');
         }
     }
 
@@ -149,18 +153,15 @@
     }
 
     function calculateSizes(charCount, mode) {
-        let sizeInfo = { charSize: 110, pinyinSize: 22, unitWidth: 120 };
-        
         if (mode === 'youtube') {
-            if (charCount <= 4) sizeInfo = { charSize: 180, pinyinSize: 32, unitWidth: 200 };
-            else if (charCount <= 6) sizeInfo = { charSize: 150, pinyinSize: 28, unitWidth: 165 };
-            else if (charCount <= 10) sizeInfo = { charSize: 100, pinyinSize: 20, unitWidth: 110 };
+            if (charCount <= 4) return { charSize: 180, pinyinSize: 32, unitWidth: 200 };
+            if (charCount <= 6) return { charSize: 140, pinyinSize: 26, unitWidth: 160 };
+            return { charSize: 90, pinyinSize: 18, unitWidth: 100 };
         } else {
-            // 手机竖屏模式：通常每行显示 2-3 个汉字
-            if (charCount <= 6) sizeInfo = { charSize: 200, pinyinSize: 36, unitWidth: 240 };
-            else sizeInfo = { charSize: 160, pinyinSize: 30, unitWidth: 180 };
+            // 手机竖屏模式：字要更大
+            if (charCount <= 4) return { charSize: 240, pinyinSize: 40, unitWidth: 260 };
+            return { charSize: 160, pinyinSize: 28, unitWidth: 180 };
         }
-        return sizeInfo;
     }
 
     async function startProcess() {
@@ -174,6 +175,7 @@
                 audio: { echoCancellation: false }
             });
 
+            // 进入录制模式
             document.body.classList.add('is-recording');
             downloadLink.style.display = "none";
             
@@ -191,70 +193,53 @@
                 document.body.classList.remove('is-recording');
             };
 
+            // 初始化画面
             document.getElementById('full-cn').innerText = cn;
             document.getElementById('full-fr').innerText = fr;
             const grid = document.getElementById('writer-grid');
             grid.innerHTML = '';
             
             const chars = cn.split('');
-            const sizeInfo = calculateSizes(chars.length, currentMode);
+            const size = calculateSizes(chars.length, currentMode);
             const writers = [];
 
             chars.forEach((char, i) => {
                 const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
                 const unit = document.createElement('div');
                 unit.className = 'char-unit';
-                unit.style.width = sizeInfo.unitWidth + 'px';
-                
+                unit.style.width = size.unitWidth + 'px';
                 unit.innerHTML = `
-                    <div class="pinyin-label" style="font-size: ${sizeInfo.pinyinSize}px;">${isHanzi ? pinyin(char) : ""}</div>
-                    <div id="hz-${i}" class="writer-div" style="width: ${sizeInfo.charSize}px; height: ${sizeInfo.charSize}px;"></div>
+                    <div class="pinyin-label" style="font-size: ${size.pinyinSize}px;">${isHanzi ? pinyin(char) : ""}</div>
+                    <div id="hz-${i}" class="writer-div" style="width: ${size.charSize}px; height: ${size.charSize}px;"></div>
                 `;
                 grid.appendChild(unit);
-
                 if (isHanzi) {
-                    const writer = HanziWriter.create(`hz-${i}`, char, { 
-                        width: sizeInfo.charSize, height: sizeInfo.charSize, padding: 5,
-                        strokeAnimationSpeed: 2, strokeColor: '#1a1a1a', drawingColor: '#b03a2e'
-                    });
-                    writers.push({ type: 'hanzi', char, instance: writer });
+                    writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
+                        width: size.charSize, height: size.charSize, strokeColor: '#1a1a1a', drawingColor: '#b03a2e' 
+                    }) });
                 } else {
-                    const sym = document.createElement('span');
-                    sym.className = 'symbol-style';
-                    sym.style.fontSize = (sizeInfo.charSize * 0.8) + 'px';
-                    sym.style.lineHeight = sizeInfo.charSize + 'px';
-                    sym.innerText = char;
-                    document.getElementById(`hz-${i}`).appendChild(sym);
+                    document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style" style="font-size:${size.charSize*0.8}px;line-height:${size.charSize}px;">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
 
             recorder.start();
             await new Promise(r => setTimeout(r, 1000));
-            
             await speak(cn, 'zh-CN');
             await speak(fr, 'fr-FR');
-            
             for (let item of writers) {
-                if (item.type === 'hanzi') {
-                    speak(item.char, 'zh-CN');
-                    await item.instance.animateCharacter();
-                }
-                await new Promise(r => setTimeout(r, 500));
+                if (item.type === 'hanzi') { speak(item.char, 'zh-CN'); await item.instance.animateCharacter(); }
+                await new Promise(r => setTimeout(r, 400));
             }
-            
             await speak(cn, 'zh-CN');
             await speak(fr, 'fr-FR');
             await new Promise(r => setTimeout(r, 1500));
-
             recorder.stop();
             stream.getTracks().forEach(t => t.stop());
-
         } catch (err) {
             document.body.classList.remove('is-recording');
         }
     }
-
     startBtn.addEventListener('click', startProcess);
 </script>
 
