@@ -2,165 +2,151 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字笔顺与中法文演示 (YouTube 格式)</title>
+    <title>汉字笔顺视频生成器</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
-    <style>
-        body { 
-            font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background: #f0f2f5; 
-            display: flex; 
-            justify-content: center; 
-            align-items: flex-start; /* 调整对齐方式 */
-            min-height: 100vh;
+    <script src="https://unpkg.com/pinyin-pro"></script> <style>
+        body { font-family: sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        /* 录制区域：严格遵守 YouTube 16:9 比例 (1280x720 比例缩小) */
+        #video-stage {
+            width: 854px; 
+            height: 480px; 
+            background: white;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
             box-sizing: border-box;
         }
 
-        /* 模拟YouTube视频的16:9比例 */
-        .youtube-frame {
-            width: 960px; /* 示例宽度，可调整 */
-            height: 540px; /* 960 * 9 / 16 = 540 */
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* 确保内容不会溢出 */
-        }
+        .input-panel { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 814px; display: flex; gap: 10px; flex-wrap: wrap; }
+        input { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; cursor: pointer; background: #ff0000; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:disabled { background: #ccc; }
 
-        .input-section {
-            margin-bottom: 25px;
-            background: #e9ecef;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        /* 视频内元素样式 */
+        #header-display { margin-bottom: 30px; }
+        #full-cn { font-size: 32px; font-weight: bold; margin-bottom: 10px; color: #333; }
+        #full-fr { font-size: 24px; color: #0056b3; font-style: italic; }
+        
+        #writer-canvas-area {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-        .input-group textarea {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            font-size: 16px;
-            resize: vertical; /* 允许垂直调整大小 */
-            min-height: 60px;
-            max-height: 120px;
-        }
-        .input-group button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-            align-self: flex-end; /* 按钮靠右 */
-        }
-        .input-group button:hover {
-            background-color: #0056b3;
-        }
-        .input-group button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-
-        .full-text-display {
-            margin-bottom: 25px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 20px;
-            text-align: left; /* 文本左对齐 */
-        }
-        .lang-label {
-            color: #6c757d;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-        .content-text {
-            font-size: 26px; /* 完整显示字体大一点 */
-            font-weight: bold;
-            line-height: 1.5;
-            color: #343a40;
-        }
-        .content-text.fr {
-            color: #0056b3;
-        }
-
-        .animation-area {
-            flex-grow: 1; /* 占据剩余空间 */
-            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
-            align-items: center; /* 垂直居中 */
-            flex-wrap: wrap; /* 允许换行 */
-            gap: 15px; /* 汉字之间的间距 */
-            overflow-y: auto; /* 当内容过多时允许滚动 */
-            padding-top: 10px;
-            padding-bottom: 10px;
+            align-content: center;
+            flex-grow: 1;
         }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 70px; }
+        .py-text { color: red; font-size: 14px; margin-bottom: 4px; height: 20px; }
+        .hz-box { width: 60px; height: 60px; border: 1px dashed #eee; }
 
-        .char-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            margin: 5px; /* 更小的外边距 */
-            width: 80px; /* 控制每个汉字容器的宽度 */
-            height: 100px; /* 控制每个汉字容器的高度 */
-            position: relative;
-        }
-        .hanzi-target {
-            width: 70px;  /* 汉字书写区更小 */
-            height: 70px; /* 汉字书写区更小 */
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            background: #fdfdfd;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .pinyin {
-            font-size: 14px; /* 拼音字体更小 */
-            color: #e74c3c;
-            margin-top: 5px;
-            height: 18px; /* 确保拼音区域有固定高度 */
-            white-space: nowrap; /* 防止拼音换行 */
-        }
+        #download-link { margin-top: 15px; display: none; color: #0056b3; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="youtube-frame">
-    <div class="input-section">
-        <div class="input-group">
-            <label for="chineseInput">中文 (Chinois):</label>
-            <textarea id="chineseInput" placeholder="请输入中文句子..."></textarea>
-        </div>
-        <div class="input-group">
-            <label for="frenchInput">法语 (Français):</label>
-            <textarea id="frenchInput" placeholder="请输入法语句子..."></textarea>
-        </div>
-        <div class="input-group">
-            <label for="pinyinInput">拼音 (Pinyin，空格分隔每个汉字):</label>
-            <textarea id="pinyinInput" placeholder="请输入对应拼音，用空格分隔，例如: ni3 hao3"></textarea>
-        </div>
-        <button id="generateBtn">生成演示</button>
-    </div>
+<div class="input-panel">
+    <input type="text" id="cn-input" placeholder="输入中文句子" value="梅花香自苦寒来">
+    <input type="text" id="fr-input" placeholder="输入法语翻译" value="Le parfum de la prune vient du froid amer">
+    <button id="record-btn">生成视频并下载</button>
+</div>
 
-    <div class="full-text-display">
-        <div class="lang-label">中文 (Chinois)</div>
-        <div id="fullCnText" class="content-text"></div>
+<div id="video-stage">
+    <div id="header-display">
+        <div id="full-cn"></div>
+        <div id="full-fr"></div>
+    </div>
+    <div id="writer-canvas-area"></div>
+</div>
+
+<a id="download-link">视频已生成，点击此处下载</a>
+
+<script>
+    const { pinyin } = pinyinPro;
+    const recordBtn = document.getElementById('record-btn');
+    const stage = document.getElementById('video-stage');
+    const downloadLink = document.getElementById('download-link');
+
+    async function startProcess() {
+        const cnText = document.getElementById('cn-input').value;
+        const frText = document.getElementById('fr-input').value;
+        if(!cnText) return;
+
+        // 1. 初始化界面
+        recordBtn.disabled = true;
+        recordBtn.innerText = "正在录制视频...";
+        downloadLink.style.display = "none";
+        document.getElementById('full-cn').innerText = cnText;
+        document.getElementById('full-fr').innerText = frText;
+        const area = document.getElementById('writer-canvas-area');
+        area.innerHTML = '';
+
+        // 自动生成拼音数组
+        const pinyinArray = pinyin(cnText, { type: 'array' });
+
+        // 创建书写器实例
+        const writers = [];
+        cnText.split('').forEach((char, i) => {
+            const unit = document.createElement('div');
+            unit.className = 'char-unit';
+            unit.innerHTML = `<div class="py-text">${pinyinArray[i]}</div><div id="hz-${i}" class="hz-box"></div>`;
+            area.appendChild(unit);
+            
+            const writer = HanziWriter.create(`hz-${i}`, char, {
+                width: 60, height: 60, padding: 5, strokeAnimationSpeed: 2, strokeColor: '#333'
+            });
+            writers.push(writer);
+        });
+
+        // 2. 核心：启动录制
+        // 使用 html2canvas 的替代方案或直接捕获 DOM 变化
+        // 注意：Web 环境下录制 DOM 最稳定的方式是使用 RecordRTC 或原生的 getDisplayMedia
+        // 这里使用一种创新的方式：将 DOM 渲染到 Canvas 进行录制
         
-        <div class="lang-label">法语 (Français)</div>
-        <div id="fullFrText" class="content-text fr"></div>
-    </div>
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: { displaySurface: "browser", logicalSurface: true },
+                audio: false 
+            });
 
-    <hr style="border: 0; height: 1px; background: #eee; margin: 20px
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            let chunks = [];
+            
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                downloadLink.href = url;
+                downloadLink.download = "hanzi_lesson.webm";
+                downloadLink.style.display = "block";
+                recordBtn.disabled = false;
+                recordBtn.innerText = "生成视频并下载";
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+
+            // 执行书写动画
+            for (let writer of writers) {
+                await writer.animateCharacter();
+                await new Promise(r => setTimeout(r, 500)); // 每个字间隔
+            }
+
+            // 停止录制
+            setTimeout(() => mediaRecorder.stop(), 1000);
+
+        } catch (err) {
+            alert("请允许屏幕共享以捕获视频区域内容。");
+            recordBtn.disabled = false;
+            recordBtn.innerText = "生成视频并下载";
+        }
+    }
+
+    recordBtn.addEventListener('click', startProcess);
+</script>
+
+</body>
+</html>
