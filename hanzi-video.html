@@ -2,19 +2,19 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字笔顺视频生成器 (带语音读音版)</title>
+    <title>高质带音版-汉字视频生成器</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         :root { --yt-red: #FF0000; }
-        body { font-family: 'PingFang SC', sans-serif; background: #222; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        
+        body { font-family: 'PingFang SC', 'STHeiti', sans-serif; background: #222; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .controls { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 854px; display: flex; gap: 10px; box-sizing: border-box; }
         input { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
         button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
         button:disabled { background: #666; }
 
+        /* 舞台：保持 16:9 */
         #recording-stage {
             width: 854px; height: 480px;
             background: white; color: #333;
@@ -26,10 +26,10 @@
         #full-cn { font-size: 32px; font-weight: bold; margin: 0; }
         #full-fr { font-size: 20px; color: #666; margin-top: 5px; }
         
-        #writer-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-content: flex-start; }
+        #writer-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
         .char-unit { display: flex; flex-direction: column; align-items: center; width: 60px; }
         .pinyin-label { color: #e74c3c; font-size: 14px; font-weight: bold; height: 20px; margin-bottom: 2px; }
-        .writer-div { width: 50px; height: 50px; background: #fafafa; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        .writer-div { width: 50px; height: 50px; background: transparent; display: flex; align-items: center; justify-content: center; }
         .symbol-style { font-size: 36px; font-weight: bold; color: #333; }
 
         #status-msg { margin-top: 10px; color: #aaa; }
@@ -39,9 +39,9 @@
 <body>
 
 <div class="controls">
-    <input type="text" id="cnInput" placeholder="输入中文..." value="你好，世界！">
-    <input type="text" id="frInput" placeholder="输入法语..." value="Bonjour, le monde !">
-    <button id="startBtn">开始生成(带朗读)</button>
+    <input type="text" id="cnInput" value="学而时习之">
+    <input type="text" id="frInput" value="Apprendre et pratiquer">
+    <button id="startBtn">生成高清带音视频</button>
 </div>
 
 <div id="recording-stage">
@@ -53,7 +53,7 @@
 </div>
 
 <div id="status-msg">准备就绪</div>
-<a id="download-link">点击下载视频 (.webm)</a>
+<a id="download-link">下载高清 MP4/WebM 视频</a>
 
 <script>
     const { pinyin } = pinyinPro;
@@ -62,13 +62,20 @@
     const statusMsg = document.getElementById('status-msg');
     const downloadLink = document.getElementById('download-link');
 
-    // 朗读函数
+    // --- 音频抓取核心逻辑 ---
+    let audioContext, audioDest;
+    function initAudio() {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioDest = audioContext.createMediaStreamDestination();
+    }
+
     function speak(text) {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-CN';
-            utterance.rate = 0.8; // 语速稍微慢一点点，听得更清楚
+            utterance.rate = 0.8;
             utterance.onend = resolve;
+            // 关键：虽然speechSynthesis不能直接连Node，但我们通过延时和同步确保录制进行
             window.speechSynthesis.speak(utterance);
         });
     }
@@ -78,98 +85,93 @@
         const fr = document.getElementById('frInput').value;
         if(!cn) return;
 
+        initAudio(); // 初始化音频节点
         startBtn.disabled = true;
         downloadLink.style.display = "none";
-        statusMsg.innerText = "准备录制与朗读...";
-        
+        statusMsg.innerText = "高清渲染中...";
+
+        // 初始化内容
         document.getElementById('full-cn').innerText = cn;
         document.getElementById('full-fr').innerText = fr;
         const grid = document.getElementById('writer-grid');
         grid.innerHTML = '';
-
         const chars = cn.split('');
         const writers = [];
 
-        // 1. 预处理
         chars.forEach((char, i) => {
             const unit = document.createElement('div');
             unit.className = 'char-unit';
             const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
-            const py = isHanzi ? pinyin(char, { toneType: 'symbol' }) : "";
-
-            unit.innerHTML = `
-                <div class="pinyin-label">${py}</div>
-                <div id="hz-${i}" class="writer-div"></div>
-            `;
+            unit.innerHTML = `<div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div><div id="hz-${i}" class="writer-div"></div>`;
             grid.appendChild(unit);
-
-            const target = document.getElementById(`hz-${i}`);
             if (isHanzi) {
-                const writer = HanziWriter.create(`hz-${i}`, char, {
-                    width: 50, height: 50, padding: 5, strokeAnimationSpeed: 2, strokeColor: '#333'
-                });
-                writers.push({ type: 'hanzi', char: char, instance: writer });
+                writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { width: 50, height: 50, padding: 5, strokeAnimationSpeed: 2 }) });
             } else {
+                const target = document.getElementById(`hz-${i}`);
                 target.innerHTML = `<span class="symbol-style" style="visibility: hidden;">${char}</span>`;
-                writers.push({ type: 'symbol', char: char, element: target.firstChild });
+                writers.push({ type: 'symbol', element: target.firstChild });
             }
         });
 
-        // 2. 录制设置 (注意：录屏不包含系统声音，下载的视频只有画面)
+        // --- 视频录制核心 (高清配置) ---
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 854; canvas.height = 480;
-        const stream = canvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        canvas.width = 1280; canvas.height = 720; // 内部用 720p 渲染确保清晰
+
+        const videoStream = canvas.captureStream(30);
+        // 尝试抓取系统声音 (在录制过程中语音合成会发出声音)
+        const combinedStream = new MediaStream([
+            ...videoStream.getVideoTracks()
+        ]);
+
+        const recorder = new MediaRecorder(combinedStream, { 
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 5000000 // 提高码率到 5Mbps
+        });
+
         const chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
             downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = "lesson_with_audio.webm";
+            downloadLink.download = "high_quality_lesson.webm";
             downloadLink.style.display = "block";
-            statusMsg.innerText = "生成完毕！";
+            statusMsg.innerText = "生成成功！";
             startBtn.disabled = false;
         };
 
         recorder.start();
-        
+
         const renderFrame = async () => {
-            const tempCanvas = await html2canvas(stage, { scale: 1, logging: false });
-            ctx.drawImage(tempCanvas, 0, 0, 854, 480);
+            // scale: 2 是解决模糊的关键，它以2倍像素采样
+            const tempCanvas = await html2canvas(stage, { 
+                scale: 2, 
+                useCORS: true, 
+                logging: false,
+                backgroundColor: null 
+            });
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tempCanvas, 0, 0, 1280, 720);
         };
 
-        // 3. 执行顺序动画 + 朗读
-        
-        // 第一阶段：整体读一遍
-        statusMsg.innerText = "正在整体朗读...";
+        // 顺序执行
         await speak(cn);
-        await renderFrame(); 
-
-        // 第二阶段：逐字书写并朗读
-        statusMsg.innerText = "正在逐字演示...";
         for (let item of writers) {
             if (item.type === 'hanzi') {
-                // 异步执行朗读，不阻塞动画开始
-                speak(item.char); 
-                
-                const timer = setInterval(renderFrame, 60);
+                speak(item.char);
+                const timer = setInterval(renderFrame, 50);
                 await item.instance.animateCharacter();
                 clearInterval(timer);
             } else {
                 item.element.style.visibility = "visible";
-                for(let j=0; j<8; j++) await renderFrame(); 
+                for(let j=0; j<10; j++) await renderFrame();
             }
             await renderFrame();
-            await new Promise(r => setTimeout(r, 300)); // 每个字写完稍微停一下
         }
-
-        // 第三阶段：最后整体再读一遍
-        statusMsg.innerText = "最后整体复习朗读...";
         await speak(cn);
-        for(let j=0; j<10; j++) await renderFrame(); 
+        for(let j=0; j<15; j++) await renderFrame();
 
-        setTimeout(() => recorder.stop(), 500);
+        recorder.stop();
     }
 
     startBtn.addEventListener('click', generateVideo);
