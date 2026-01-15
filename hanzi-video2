@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>汉字教学视频生成器-定制版</title>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <style>
+        :root { --yt-red: #cc0000; --paper: #fdf5e6; --accent: #b03a2e; }
+        body { 
+            font-family: "PingFang SC", "Kaiti", "STKaiti", serif; 
+            background: #222; color: white; margin: 0; 
+            display: flex; flex-direction: column; align-items: center;
+            overflow: hidden;
+        }
+        
+        /* UI控制区 */
+        #ui-controls { 
+            background: #333; padding: 20px; width: 100%; 
+            display: flex; justify-content: center; gap: 10px; 
+            box-sizing: border-box; z-index: 100;
+        }
+        input { width: 300px; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
+        button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
+        
+        /* 录制舞台 */
+        #recording-stage {
+            width: 1280px; height: 720px;
+            background-color: var(--paper);
+            background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
+            color: #2c3e50;
+            display: flex; flex-direction: column; 
+            padding: 50px 80px; box-sizing: border-box;
+            position: relative; /* 为图标定位 */
+        }
+
+        /* 漂亮图标样式 */
+        #logo-area {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 50px; height: 50px;
+            background: var(--accent);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid #8e2d24;
+        }
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .logo-cn { font-size: 18px; font-weight: bold; color: #1a1a1a; letter-spacing: 1px; }
+        .logo-fr { font-size: 12px; color: var(--accent); font-weight: 500; text-transform: uppercase; }
+
+        /* 录制状态切换 */
+        body.is-recording #ui-controls { display: none; }
+        body.is-recording #recording-stage {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        }
+
+        #header-area { 
+            border-bottom: 2px solid rgba(0,0,0,0.1); 
+            padding-bottom: 20px; 
+            margin-bottom: 30px; 
+            margin-top: 20px; /* 为图标留出一点顶部空间 */
+            text-align: center;
+        }
+        #full-cn { font-size: 40px; font-weight: bold; margin: 0; color: #1a1a1a; }
+        #full-fr { font-size: 24px; color: #5d6d7e; margin-top: 10px; font-style: italic; }
+        
+        #writer-grid { 
+            display: flex; flex-wrap: wrap; gap: 20px; 
+            justify-content: center; align-content: center; flex-grow: 1;
+        }
+
+        /* 右上角下载按钮 */
+        #download-link { 
+            position: fixed; top: 20px; right: 20px; 
+            background: #27ae60; padding: 12px 20px; 
+            color: white; border-radius: 8px; font-weight: bold;
+            text-decoration: none; display: none; z-index: 999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 14px;
+        }
+
+        .char-unit { display: flex; flex-direction: column; align-items: center; transition: all 0.3s; }
+        .pinyin-label { color: var(--accent); font-weight: bold; margin-bottom: 5px; text-align: center; }
+        .writer-div { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .symbol-style { font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+
+<div id="ui-controls">
+    <input type="text" id="cnInput" value="厚德载物">
+    <input type="text" id="frInput" value="La grande vertu porte les choses">
+    <button id="startBtn">开始制作</button>
+</div>
+
+<div id="recording-stage">
+    <div id="logo-area">
+        <div class="logo-icon">学</div>
+        <div class="logo-text">
+            <span class="logo-cn">快乐学中文</span>
+            <span class="logo-fr">Apprendre le Chinois avec Joie</span>
+        </div>
+    </div>
+
+    <div id="header-area">
+        <div id="full-cn"></div>
+        <div id="full-fr"></div>
+    </div>
+    <div id="writer-grid"></div>
+</div>
+
+<a id="download-link" href="#">⬇ 下载录制好的视频</a>
+
+<script>
+    const { pinyin } = pinyinPro;
+    const startBtn = document.getElementById('startBtn');
+    const downloadLink = document.getElementById('download-link');
+
+    function speak(text, lang = 'zh-CN') {
+        return new Promise((resolve) => {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.rate = 0.8;
+            utterance.onend = resolve;
+            window.speechSynthesis.speak(utterance);
+        });
+    }
+
+    function calculateSizes(charCount) {
+        let sizeInfo = { charSize: 120, pinyinSize: 24, unitWidth: 130 };
+        if (charCount <= 4) {
+            sizeInfo = { charSize: 180, pinyinSize: 32, unitWidth: 200 };
+        } else if (charCount <= 6) {
+            sizeInfo = { charSize: 150, pinyinSize: 28, unitWidth: 160 };
+        } else if (charCount <= 10) {
+            sizeInfo = { charSize: 100, pinyinSize: 20, unitWidth: 110 };
+        } else {
+            sizeInfo = { charSize: 80, pinyinSize: 16, unitWidth: 90 };
+        }
+        return sizeInfo;
+    }
+
+    async function startProcess() {
+        const cn = document.getElementById('cnInput').value;
+        const fr = document.getElementById('frInput').value;
+        if(!cn) return;
+
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { displaySurface: "browser" },
+                audio: { echoCancellation: false }
+            });
+
+            document.body.classList.add('is-recording');
+            downloadLink.style.display = "none";
+            
+            const recorder = new MediaRecorder(stream, { 
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 10000000 
+            });
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = "lesson.webm";
+                downloadLink.style.display = "block";
+                document.body.classList.remove('is-recording');
+            };
+
+            document.getElementById('full-cn').innerText = cn;
+            document.getElementById('full-fr').innerText = fr;
+            const grid = document.getElementById('writer-grid');
+            grid.innerHTML = '';
+            
+            const chars = cn.split('');
+            const sizeInfo = calculateSizes(chars.length);
+            const writers = [];
+
+            chars.forEach((char, i) => {
+                const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
+                const unit = document.createElement('div');
+                unit.className = 'char-unit';
+                unit.style.width = sizeInfo.unitWidth + 'px';
+                
+                unit.innerHTML = `
+                    <div class="pinyin-label" style="font-size: ${sizeInfo.pinyinSize}px;">${isHanzi ? pinyin(char) : ""}</div>
+                    <div id="hz-${i}" class="writer-div" style="width: ${sizeInfo.charSize}px; height: ${sizeInfo.charSize}px;"></div>
+                `;
+                grid.appendChild(unit);
+
+                if (isHanzi) {
+                    const writer = HanziWriter.create(`hz-${i}`, char, { 
+                        width: sizeInfo.charSize, height: sizeInfo.charSize, padding: 5,
+                        strokeAnimationSpeed: 2,
+                        strokeColor: '#1a1a1a',
+                        drawingColor: '#b03a2e'
+                    });
+                    writers.push({ type: 'hanzi', char, instance: writer });
+                } else {
+                    const sym = document.createElement('span');
+                    sym.className = 'symbol-style';
+                    sym.style.fontSize = (sizeInfo.charSize * 0.8) + 'px';
+                    sym.style.lineHeight = sizeInfo.charSize + 'px';
+                    sym.innerText = char;
+                    document.getElementById(`hz-${i}`).appendChild(sym);
+                    writers.push({ type: 'symbol' });
+                }
+            });
+
+            recorder.start();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await speak(cn, 'zh-CN');
+            await speak(fr, 'fr-FR');
+            
+            for (let item of writers) {
+                if (item.type === 'hanzi') {
+                    speak(item.char, 'zh-CN');
+                    await item.instance.animateCharacter();
+                }
+                await new Promise(r => setTimeout(r, 400));
+            }
+            
+            await speak(cn, 'zh-CN');
+            await speak(fr, 'fr-FR');
+            await new Promise(r => setTimeout(r, 1500));
+
+            recorder.stop();
+            stream.getTracks().forEach(t => t.stop());
+
+        } catch (err) {
+            document.body.classList.remove('is-recording');
+        }
+    }
+
+    startBtn.addEventListener('click', startProcess);
+</script>
+
+</body>
+</html>
