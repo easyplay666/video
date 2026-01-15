@@ -2,150 +2,137 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字笔顺视频生成器</title>
+    <title>汉字笔顺视频自动导出器</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
-    <script src="https://unpkg.com/pinyin-pro"></script> <style>
-        body { font-family: sans-serif; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root { --yt-red: #FF0000; }
+        body { font-family: 'PingFang SC', sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 40px; }
         
-        /* 录制区域：严格遵守 YouTube 16:9 比例 (1280x720 比例缩小) */
-        #video-stage {
-            width: 854px; 
-            height: 480px; 
-            background: white;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            padding: 40px;
-            box-sizing: border-box;
+        /* YouTube 16:9 录制舞台 */
+        #recording-stage {
+            width: 854px; height: 480px;
+            background: white; color: #333;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column; padding: 40px; box-sizing: border-box;
         }
 
-        .input-panel { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 814px; display: flex; gap: 10px; flex-wrap: wrap; }
-        input { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; cursor: pointer; background: #ff0000; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:disabled { background: #ccc; }
+        .controls { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 814px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
+        button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:disabled { background: #666; cursor: not-allowed; }
 
-        /* 视频内元素样式 */
-        #header-display { margin-bottom: 30px; }
-        #full-cn { font-size: 32px; font-weight: bold; margin-bottom: 10px; color: #333; }
-        #full-fr { font-size: 24px; color: #0056b3; font-style: italic; }
+        /* 内容布局 */
+        #header-area { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        #full-cn { font-size: 36px; font-weight: bold; margin: 0; }
+        #full-fr { font-size: 20px; color: #555; margin-top: 5px; }
         
-        #writer-canvas-area {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            align-content: center;
-            flex-grow: 1;
-        }
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 70px; }
-        .py-text { color: red; font-size: 14px; margin-bottom: 4px; height: 20px; }
-        .hz-box { width: 60px; height: 60px; border: 1px dashed #eee; }
+        #writer-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 65px; }
+        .pinyin-label { color: #e74c3c; font-size: 14px; font-weight: bold; margin-bottom: 2px; height: 18px; }
+        .writer-div { width: 60px; height: 60px; background: #fafafa; border: 1px solid #eee; }
 
-        #download-link { margin-top: 15px; display: none; color: #0056b3; font-weight: bold; }
+        #status-msg { margin-top: 10px; color: #aaa; font-size: 14px; }
+        #download-btn { margin-top: 15px; display: none; background: #27ae60; text-decoration: none; padding: 12px 24px; color: white; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="input-panel">
-    <input type="text" id="cn-input" placeholder="输入中文句子" value="梅花香自苦寒来">
-    <input type="text" id="fr-input" placeholder="输入法语翻译" value="Le parfum de la prune vient du froid amer">
-    <button id="record-btn">生成视频并下载</button>
+<div class="controls">
+    <input type="text" id="cnInput" placeholder="输入中文..." value="学而时习之">
+    <input type="text" id="frInput" placeholder="输入法语..." value="Apprendre et pratiquer sans cesse">
+    <button id="startBtn">开始生成视频</button>
 </div>
 
-<div id="video-stage">
-    <div id="header-display">
+<div id="recording-stage">
+    <div id="header-area">
         <div id="full-cn"></div>
         <div id="full-fr"></div>
     </div>
-    <div id="writer-canvas-area"></div>
+    <div id="writer-grid"></div>
 </div>
 
-<a id="download-link">视频已生成，点击此处下载</a>
+<div id="status-msg">准备就绪</div>
+<a id="download-btn">点击下载生成好的视频</a>
 
 <script>
     const { pinyin } = pinyinPro;
-    const recordBtn = document.getElementById('record-btn');
-    const stage = document.getElementById('video-stage');
-    const downloadLink = document.getElementById('download-link');
+    const startBtn = document.getElementById('startBtn');
+    const stage = document.getElementById('recording-stage');
+    const statusMsg = document.getElementById('status-msg');
+    const downloadBtn = document.getElementById('download-btn');
 
-    async function startProcess() {
-        const cnText = document.getElementById('cn-input').value;
-        const frText = document.getElementById('fr-input').value;
-        if(!cnText) return;
+    async function generateVideo() {
+        const cn = document.getElementById('cnInput').value;
+        const fr = document.getElementById('frInput').value;
+        if(!cn) return;
 
-        // 1. 初始化界面
-        recordBtn.disabled = true;
-        recordBtn.innerText = "正在录制视频...";
-        downloadLink.style.display = "none";
-        document.getElementById('full-cn').innerText = cnText;
-        document.getElementById('full-fr').innerText = frText;
-        const area = document.getElementById('writer-canvas-area');
-        area.innerHTML = '';
+        // 1. 初始化界面与拼音
+        startBtn.disabled = true;
+        downloadBtn.style.display = "none";
+        statusMsg.innerText = "正在初始化汉字...";
+        
+        document.getElementById('full-cn').innerText = cn;
+        document.getElementById('full-fr').innerText = fr;
+        const grid = document.getElementById('writer-grid');
+        grid.innerHTML = '';
 
-        // 自动生成拼音数组
-        const pinyinArray = pinyin(cnText, { type: 'array' });
-
-        // 创建书写器实例
+        const pyList = pinyin(cn, { type: 'array' });
         const writers = [];
-        cnText.split('').forEach((char, i) => {
+
+        cn.split('').forEach((char, i) => {
             const unit = document.createElement('div');
             unit.className = 'char-unit';
-            unit.innerHTML = `<div class="py-text">${pinyinArray[i]}</div><div id="hz-${i}" class="hz-box"></div>`;
-            area.appendChild(unit);
-            
-            const writer = HanziWriter.create(`hz-${i}`, char, {
+            unit.innerHTML = `<div class="pinyin-label">${pyList[i]}</div><div id="hz-${i}" class="writer-div"></div>`;
+            grid.appendChild(unit);
+            writers.push(HanziWriter.create(`hz-${i}`, char, {
                 width: 60, height: 60, padding: 5, strokeAnimationSpeed: 2, strokeColor: '#333'
-            });
-            writers.push(writer);
+            }));
         });
 
-        // 2. 核心：启动录制
-        // 使用 html2canvas 的替代方案或直接捕获 DOM 变化
-        // 注意：Web 环境下录制 DOM 最稳定的方式是使用 RecordRTC 或原生的 getDisplayMedia
-        // 这里使用一种创新的方式：将 DOM 渲染到 Canvas 进行录制
-        
-        try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ 
-                video: { displaySurface: "browser", logicalSurface: true },
-                audio: false 
-            });
+        // 2. 录制逻辑：捕捉 Canvas 流
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 854;
+        canvas.height = 480;
+        const stream = canvas.captureStream(30); // 30 FPS
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
 
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-            let chunks = [];
-            
-            mediaRecorder.ondataavailable = e => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                downloadLink.href = url;
-                downloadLink.download = "hanzi_lesson.webm";
-                downloadLink.style.display = "block";
-                recordBtn.disabled = false;
-                recordBtn.innerText = "生成视频并下载";
-                stream.getTracks().forEach(track => track.stop());
-            };
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            downloadBtn.href = URL.createObjectURL(blob);
+            downloadBtn.download = "chinois_lesson.webm";
+            downloadBtn.style.display = "block";
+            statusMsg.innerText = "生成成功！";
+            startBtn.disabled = false;
+        };
 
-            mediaRecorder.start();
+        recorder.start();
+        statusMsg.innerText = "录制中，请勿切换标签页...";
 
-            // 执行书写动画
-            for (let writer of writers) {
-                await writer.animateCharacter();
-                await new Promise(r => setTimeout(r, 500)); // 每个字间隔
-            }
+        // 3. 动画驱动循环：每一帧将 DOM 渲染到录制 Canvas
+        const renderFrame = async () => {
+            const tempCanvas = await html2canvas(stage, { scale: 1 });
+            ctx.drawImage(tempCanvas, 0, 0, 854, 480);
+        };
 
-            // 停止录制
-            setTimeout(() => mediaRecorder.stop(), 1000);
-
-        } catch (err) {
-            alert("请允许屏幕共享以捕获视频区域内容。");
-            recordBtn.disabled = false;
-            recordBtn.innerText = "生成视频并下载";
+        // 执行笔顺动画并同步录制
+        for (let writer of writers) {
+            // 每写一笔前刷新一帧，或者使用 setInterval 持续刷新
+            const animInterval = setInterval(renderFrame, 50); // 20fps 录制频率
+            await writer.animateCharacter();
+            clearInterval(animInterval);
+            await renderFrame(); // 确保写完的一帧被捕获
         }
+
+        // 结束录制
+        setTimeout(() => recorder.stop(), 500);
     }
 
-    recordBtn.addEventListener('click', startProcess);
+    startBtn.addEventListener('click', generateVideo);
 </script>
 
 </body>
