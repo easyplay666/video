@@ -2,17 +2,17 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>视频录制程序</title>
+<title>视频录制程序（横竖屏 + 毫秒计时）</title>
 <style>
 body {
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     text-align: center;
 }
 video {
     width: 640px;
     background: black;
 }
-button {
+button, select {
     margin: 5px;
     padding: 10px 15px;
 }
@@ -32,11 +32,21 @@ button:disabled {
 
 <body>
 
-<h2>视频录制程序</h2>
+<h2>视频录制程序（横竖屏 + 毫秒计时）</h2>
 
 <video id="preview" autoplay muted></video>
 
-<div id="timer">00:00</div>
+<div>
+  <label for="orientation">画面方向：</label>
+  <select id="orientation">
+    <option value="landscape">横屏 16:9</option>
+    <option value="portrait">竖屏 9:16</option>
+  </select>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<div id="timer">00:00.000</div>
 
 <div>
     <button id="startBtn">开始录制</button>
@@ -45,113 +55,54 @@ button:disabled {
     <button id="stopBtn" disabled>停止</button>
 </div>
 
-<a id="download" href="#" download="recording.webm">
-⬇ 下载录制的视频
-</a>
+<a id="download" href="#" download="recording.webm">⬇ 下载录制的视频</a>
 
 <script>
 let mediaRecorder;
 let recordedChunks = [];
 let stream;
-
 let timerInterval;
-let seconds = 0;
+let startTime = 0;
 
 const preview = document.getElementById("preview");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const resumeBtn = document.getElementById("resumeBtn");
 const stopBtn = document.getElementById("stopBtn");
 const timerDisplay = document.getElementById("timer");
 const downloadLink = document.getElementById("download");
+const orientationSelect = document.getElementById("orientation");
 
-/* ===== 计时 ===== */
+/* ===== 横竖屏设置 ===== */
+function setCanvasSize() {
+    if (orientationSelect.value === "portrait") {
+        canvas.width = 720;
+        canvas.height = 1280;
+    } else {
+        canvas.width = 1280;
+        canvas.height = 720;
+    }
+}
+
+orientationSelect.onchange = () => {
+    setCanvasSize();
+};
+
+/* ===== 计时器（毫秒级） ===== */
 function resetTimer() {
     clearInterval(timerInterval);
-    seconds = 0;
-    timerDisplay.textContent = "00:00";
+    startTime = 0;
+    timerDisplay.textContent = "00:00.000";
 }
 
 function startTimer() {
+    const offset = startTime ? Date.now() - startTime : 0;
+    startTime = Date.now() - offset;
     timerInterval = setInterval(() => {
-        seconds++;
-        const min = String(Math.floor(seconds / 60)).padStart(2, "0");
-        const sec = String(seconds % 60).padStart(2, "0");
-        timerDisplay.textContent = `${min}:${sec}`;
-    }, 1000);
-}
-
-/* ===== 开始 ===== */
-startBtn.onclick = async () => {
-    downloadLink.style.display = "none";
-    resetTimer();
-
-    stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-    });
-
-    preview.srcObject = stream;
-    preview.play();
-
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
-
-    mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
-        const url = URL.createObjectURL(blob);
-
-        downloadLink.href = url;
-        downloadLink.style.display = "inline-block";
-
-        stream.getTracks().forEach(track => track.stop());
-
-        startBtn.disabled = false;
-    };
-
-    mediaRecorder.start();
-    startTimer();
-
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
-    resumeBtn.disabled = true;
-    stopBtn.disabled = false;
-};
-
-/* ===== 暂停 ===== */
-pauseBtn.onclick = () => {
-    mediaRecorder.pause();
-    preview.pause();     // 画面冻结
-    clearInterval(timerInterval);
-
-    pauseBtn.disabled = true;
-    resumeBtn.disabled = false;
-};
-
-/* ===== 继续 ===== */
-resumeBtn.onclick = () => {
-    mediaRecorder.resume();
-    preview.play();      // 画面恢复
-    startTimer();
-
-    resumeBtn.disabled = true;
-    pauseBtn.disabled = false;
-};
-
-/* ===== 停止 ===== */
-stopBtn.onclick = () => {
-    mediaRecorder.stop();
-    clearInterval(timerInterval);
-
-    pauseBtn.disabled = true;
-    resumeBtn.disabled = true;
-    stopBtn.disabled = true;
-};
-</script>
-
-</body>
-</html>
+        const elapsed = Date.now() - startTime;
+        const minutes = String(Math.floor(elapsed / 60000)).padStart(2, "0");
+        const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, "0");
+        const ms = String(elapsed % 1000).padStart(3, "0");
+        timerDisplay.textC
