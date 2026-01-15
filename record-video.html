@@ -1,93 +1,140 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>HTML 视频录制</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 30px;
-    }
-    video {
-      width: 480px;
-      border: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 15px;
-      font-size: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>HTML 视频录制（专业版）</title>
+
+<style>
+  body { font-family: Arial; text-align: center; margin-top: 20px; }
+  canvas { border: 1px solid #ccc; }
+  select, button { margin: 5px; padding: 8px 12px; }
+</style>
 </head>
+
 <body>
 
-  <h2>HTML 视频录制示例</h2>
+<h2>HTML 视频录制（支持暂停 / 尺寸 / 虚拟背景）</h2>
 
-  <video id="preview" autoplay muted></video>
-  <br>
+<video id="camera" autoplay muted playsinline style="display:none"></video>
+<canvas id="canvas"></canvas>
+<br>
 
-  <button id="init">开启摄像头</button>
-  <button id="start" disabled>开始录制</button>
-  <button id="stop" disabled>停止录制</button>
+<select id="format">
+  <option value="landscape">YouTube 横屏 (16:9)</option>
+  <option value="portrait">手机竖屏 (9:16)</option>
+</select>
 
-  <script>
-    let mediaRecorder;
-    let recordedChunks = [];
-    let stream;
+<select id="background">
+  <option value="none">无背景</option>
+  <option value="color">纯色背景</option>
+  <option value="image">图片背景</option>
+</select>
 
-    const preview = document.getElementById("preview");
-    const initBtn = document.getElementById("init");
-    const startBtn = document.getElementById("start");
-    const stopBtn = document.getElementById("stop");
+<br>
 
-    initBtn.onclick = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
+<button id="init">开启摄像头</button>
+<button id="start" disabled>开始录制</button>
+<button id="pause" disabled>暂停</button>
+<button id="resume" disabled>继续</button>
+<button id="stop" disabled>停止</button>
 
-        preview.srcObject = stream;
-        mediaRecorder = new MediaRecorder(stream);
+<script>
+let stream, recorder, chunks = [];
+const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-        mediaRecorder.ondataavailable = e => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
-        };
+const format = document.getElementById("format");
+const bgSelect = document.getElementById("background");
 
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: "video/webm" });
-          const url = URL.createObjectURL(blob);
+let bgImage = new Image();
+bgImage.src = "https://picsum.photos/1280/720"; // 示例背景
 
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "recorded-video.webm";
-          a.click();
+function setCanvasSize() {
+  if (format.value === "portrait") {
+    canvas.width = 720;
+    canvas.height = 1280;
+  } else {
+    canvas.width = 1280;
+    canvas.height = 720;
+  }
+}
 
-          recordedChunks = [];
-        };
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        startBtn.disabled = false;
-        initBtn.disabled = true;
-      } catch (err) {
-        alert("无法访问摄像头或麦克风");
-        console.error(err);
-      }
-    };
+  // 背景
+  if (bgSelect.value === "color") {
+    ctx.fillStyle = "#2c3e50";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if (bgSelect.value === "image") {
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+  }
 
-    startBtn.onclick = () => {
-      mediaRecorder.start();
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-    };
+  // 人像视频（居中）
+  const scale = Math.min(
+    canvas.width / video.videoWidth,
+    canvas.height / video.videoHeight
+  );
 
-    stopBtn.onclick = () => {
-      mediaRecorder.stop();
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-    };
-  </script>
+  const w = video.videoWidth * scale;
+  const h = video.videoHeight * scale;
+
+  ctx.drawImage(
+    video,
+    (canvas.width - w) / 2,
+    (canvas.height - h) / 2,
+    w,
+    h
+  );
+
+  requestAnimationFrame(draw);
+}
+
+document.getElementById("init").onclick = async () => {
+  stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  video.srcObject = stream;
+
+  setCanvasSize();
+  draw();
+
+  document.getElementById("start").disabled = false;
+};
+
+document.getElementById("start").onclick = () => {
+  const canvasStream = canvas.captureStream(30);
+  stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+
+  recorder = new MediaRecorder(canvasStream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: "video/webm" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "video.webm";
+    a.click();
+    chunks = [];
+  };
+
+  recorder.start();
+  document.getElementById("pause").disabled = false;
+  document.getElementById("stop").disabled = false;
+};
+
+document.getElementById("pause").onclick = () => {
+  recorder.pause();
+  document.getElementById("resume").disabled = false;
+};
+
+document.getElementById("resume").onclick = () => {
+  recorder.resume();
+};
+
+document.getElementById("stop").onclick = () => {
+  recorder.stop();
+};
+</script>
 
 </body>
 </html>
