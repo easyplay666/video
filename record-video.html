@@ -2,137 +2,141 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>HTML 视频录制（逻辑整理版）</title>
-
+<title>HTML 视频录制</title>
 <style>
-  body { font-family: Arial; text-align: center; margin-top: 20px; }
-  canvas { border: 1px solid #ccc; }
-  button { margin: 5px; padding: 8px 14px; }
-  #timer { font-size: 18px; margin-top: 10px; }
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+video {
+    width: 640px;
+    background: black;
+}
+button {
+    margin: 5px;
+    padding: 10px 15px;
+}
+button:disabled {
+    opacity: 0.4;
+}
+#timer {
+    font-size: 18px;
+    margin: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>HTML 视频录制（状态逻辑正确）</h2>
+<h2>视频录制程序</h2>
 
-<video id="camera" autoplay muted playsinline style="display:none"></video>
-<canvas id="canvas" width="1280" height="720"></canvas>
+<video id="preview" autoplay muted></video>
 
 <div id="timer">00:00</div>
 
-<br>
-
-<button id="init">开启摄像头</button>
-<button id="start" disabled>开始录制</button>
-<button id="pause" disabled>暂停</button>
-<button id="resume" disabled>继续</button>
-<button id="stop" disabled>停止</button>
+<div>
+    <button id="startBtn">开始录制</button>
+    <button id="pauseBtn" disabled>暂停</button>
+    <button id="resumeBtn" disabled>继续</button>
+    <button id="stopBtn" disabled>停止</button>
+</div>
 
 <script>
-const video = document.getElementById("camera");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+let mediaRecorder;
+let recordedChunks = [];
+let stream;
 
-let stream, recorder, chunks = [];
-let state = "idle";
-let drawing = false;
-
+let timerInterval;
 let seconds = 0;
-let timerInterval = null;
 
-// ====== 状态控制 ======
-function updateButtons() {
-  start.disabled  = !(state === "idle" || state === "stopped");
-  pause.disabled  = state !== "recording";
-  resume.disabled = state !== "paused";
-  stop.disabled   = !(state === "recording" || state === "paused");
-}
+const preview = document.getElementById("preview");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const resumeBtn = document.getElementById("resumeBtn");
+const stopBtn = document.getElementById("stopBtn");
+const timerDisplay = document.getElementById("timer");
 
-// ====== 计时器 ======
+/* ===== 计时器 ===== */
 function startTimer() {
-  timerInterval = setInterval(() => {
-    seconds++;
-    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-    const s = String(seconds % 60).padStart(2, "0");
-    timer.textContent = `${m}:${s}`;
-  }, 1000);
+    timerInterval = setInterval(() => {
+        seconds++;
+        const min = String(Math.floor(seconds / 60)).padStart(2, "0");
+        const sec = String(seconds % 60).padStart(2, "0");
+        timerDisplay.textContent = `${min}:${sec}`;
+    }, 1000);
 }
 
 function stopTimer() {
-  clearInterval(timerInterval);
+    clearInterval(timerInterval);
 }
 
-// ====== 绘制 ======
-function draw() {
-  if (!drawing) return;
+/* ===== 开始录制 ===== */
+startBtn.onclick = async () => {
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+    });
 
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  requestAnimationFrame(draw);
-}
+    preview.srcObject = stream;
 
-// ====== 初始化摄像头 ======
-init.onclick = async () => {
-  stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  video.srcObject = stream;
-  await video.play();
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
 
-  start.disabled = false;
+    mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "recording.webm";
+        a.click();
+
+        URL.revokeObjectURL(url);
+        stream.getTracks().forEach(track => track.stop());
+    };
+
+    mediaRecorder.start();
+    startTimer();
+
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    resumeBtn.disabled = true;
+    stopBtn.disabled = false;
 };
 
-// ====== 开始录制 ======
-start.onclick = () => {
-  chunks = [];
-  seconds = 0;
-  timer.textContent = "00:00";
+/* ===== 暂停 ===== */
+pauseBtn.onclick = () => {
+    mediaRecorder.pause();
+    stopTimer();
 
-  const canvasStream = canvas.captureStream(30);
-  stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
-
-  recorder = new MediaRecorder(canvasStream);
-  recorder.ondataavailable = e => chunks.push(e.data);
-  recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: "video/webm" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "recorded-video.webm";
-    a.click();
-  };
-
-  recorder.start();
-  state = "recording";
-  drawing = true;
-  draw();
-  startTimer();
-  updateButtons();
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = false;
 };
 
-// ====== 暂停 ======
-pause.onclick = () => {
-  recorder.pause();
-  drawing = false;   // ⭐ 画面冻结
-  stopTimer();
-  state = "paused";
-  updateButtons();
+/* ===== 继续 ===== */
+resumeBtn.onclick = () => {
+    mediaRecorder.resume();
+    startTimer();
+
+    resumeBtn.disabled = true;
+    pauseBtn.disabled = false;
 };
 
-// ====== 继续 ======
-resume.onclick = () => {
-  recorder.resume();
-  drawing = true;
-  draw();
-  startTimer();
-  state = "recording";
-  updateButtons();
-};
+/* ===== 停止 ===== */
+stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    stopTimer();
 
-// ====== 停止 ======
-stop.onclick = () => {
-  recorder.stop();
-  drawing = false;
-  stopTimer();
-  state = "stopped";
-  updateButtons();
+    startBtn.disabled = true;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    stopBtn.disabled = true;
 };
 </script>
 
