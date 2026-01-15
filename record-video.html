@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>HTML 视频录制</title>
+<title>视频录制程序</title>
 <style>
 body {
     font-family: Arial, sans-serif;
@@ -23,6 +23,10 @@ button:disabled {
     font-size: 18px;
     margin: 10px;
 }
+#download {
+    display: none;
+    margin-top: 10px;
+}
 </style>
 </head>
 
@@ -41,6 +45,10 @@ button:disabled {
     <button id="stopBtn" disabled>停止</button>
 </div>
 
+<a id="download" href="#" download="recording.webm">
+⬇ 下载录制的视频
+</a>
+
 <script>
 let mediaRecorder;
 let recordedChunks = [];
@@ -55,8 +63,15 @@ const pauseBtn = document.getElementById("pauseBtn");
 const resumeBtn = document.getElementById("resumeBtn");
 const stopBtn = document.getElementById("stopBtn");
 const timerDisplay = document.getElementById("timer");
+const downloadLink = document.getElementById("download");
 
-/* ===== 计时器 ===== */
+/* ===== 计时 ===== */
+function resetTimer() {
+    clearInterval(timerInterval);
+    seconds = 0;
+    timerDisplay.textContent = "00:00";
+}
+
 function startTimer() {
     timerInterval = setInterval(() => {
         seconds++;
@@ -66,39 +81,36 @@ function startTimer() {
     }, 1000);
 }
 
-function stopTimer() {
-    clearInterval(timerInterval);
-}
-
-/* ===== 开始录制 ===== */
+/* ===== 开始 ===== */
 startBtn.onclick = async () => {
+    downloadLink.style.display = "none";
+    resetTimer();
+
     stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
     });
 
     preview.srcObject = stream;
+    preview.play();
 
     recordedChunks = [];
     mediaRecorder = new MediaRecorder(stream);
 
     mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) {
-            recordedChunks.push(e.data);
-        }
+        if (e.data.size > 0) recordedChunks.push(e.data);
     };
 
     mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: "video/webm" });
         const url = URL.createObjectURL(blob);
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "recording.webm";
-        a.click();
+        downloadLink.href = url;
+        downloadLink.style.display = "inline-block";
 
-        URL.revokeObjectURL(url);
         stream.getTracks().forEach(track => track.stop());
+
+        startBtn.disabled = false;
     };
 
     mediaRecorder.start();
@@ -113,7 +125,8 @@ startBtn.onclick = async () => {
 /* ===== 暂停 ===== */
 pauseBtn.onclick = () => {
     mediaRecorder.pause();
-    stopTimer();
+    preview.pause();     // 画面冻结
+    clearInterval(timerInterval);
 
     pauseBtn.disabled = true;
     resumeBtn.disabled = false;
@@ -122,6 +135,7 @@ pauseBtn.onclick = () => {
 /* ===== 继续 ===== */
 resumeBtn.onclick = () => {
     mediaRecorder.resume();
+    preview.play();      // 画面恢复
     startTimer();
 
     resumeBtn.disabled = true;
@@ -131,9 +145,8 @@ resumeBtn.onclick = () => {
 /* ===== 停止 ===== */
 stopBtn.onclick = () => {
     mediaRecorder.stop();
-    stopTimer();
+    clearInterval(timerInterval);
 
-    startBtn.disabled = true;
     pauseBtn.disabled = true;
     resumeBtn.disabled = true;
     stopBtn.disabled = true;
