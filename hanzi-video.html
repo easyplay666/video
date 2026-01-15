@@ -2,49 +2,75 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字录屏生成器 (高清+原声)</title>
+    <title>汉字纯净教学视频录制器</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
         :root { --yt-red: #FF0000; }
-        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        
-        /* 录制区域样式 */
-        #recording-stage {
-            width: 854px; height: 480px;
-            background: white; color: #333;
-            position: relative; display: flex; flex-direction: column; 
-            padding: 40px; box-sizing: border-box; border-radius: 4px;
+        body { 
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif; 
+            background: #1a1a1a; color: white; 
+            margin: 0; display: flex; flex-direction: column; align-items: center; 
+            overflow-x: hidden;
         }
-
-        .controls { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 854px; display: flex; gap: 10px; box-sizing: border-box; }
-        input { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
+        
+        /* 控制区：录制时会被隐藏 */
+        #ui-controls { 
+            background: #333; padding: 20px; width: 100%; 
+            display: flex; justify-content: center; gap: 10px; 
+            box-sizing: border-box; z-index: 100;
+        }
+        input { width: 300px; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
         button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
         
-        #header-area { border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 25px; }
-        #full-cn { font-size: 34px; font-weight: bold; margin: 0; }
-        #full-fr { font-size: 22px; color: #555; margin-top: 5px; }
-        
-        #writer-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 65px; }
-        .pinyin-label { color: #e74c3c; font-size: 16px; font-weight: bold; height: 22px; margin-bottom: 4px; }
-        .writer-div { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
-        .symbol-style { font-size: 40px; font-weight: bold; }
+        /* 录制舞台：录制时它会占满全屏 */
+        #recording-stage {
+            width: 1280px; height: 720px; /* 强制 16:9 高清比例 */
+            background: white; color: #333;
+            display: flex; flex-direction: column; 
+            padding: 60px; box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
 
-        .guide-box { margin-top: 10px; padding: 10px; border: 1px dashed #666; font-size: 14px; color: #ff9800; }
-        #download-link { margin-top: 15px; display: none; background: #27ae60; padding: 12px 24px; color: white; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        /* 隐藏 UI 时的样式调整 */
+        body.is-recording #ui-controls, 
+        body.is-recording .guide-box { 
+            display: none; 
+        }
+        body.is-recording #recording-stage {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            border-radius: 0; padding: 10vh 10vw;
+        }
+
+        #header-area { border-bottom: 3px solid #eee; padding-bottom: 20px; margin-bottom: 40px; }
+        #full-cn { font-size: 48px; font-weight: bold; margin: 0; }
+        #full-fr { font-size: 28px; color: #666; margin-top: 10px; }
+        
+        #writer-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 100px; }
+        .pinyin-label { color: #e74c3c; font-size: 22px; font-weight: bold; height: 30px; margin-bottom: 5px; }
+        .writer-div { width: 90px; height: 90px; }
+        .symbol-style { font-size: 60px; font-weight: bold; line-height: 90px; }
+
+        .guide-box { margin: 15px; color: #ff9800; font-size: 14px; }
+        #download-link { 
+            position: fixed; bottom: 20px; background: #27ae60; 
+            padding: 15px 30px; color: white; border-radius: 50px; 
+            text-decoration: none; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none; z-index: 200;
+        }
     </style>
 </head>
 <body>
 
-<div class="controls">
-    <input type="text" id="cnInput" value="你好，世界">
-    <input type="text" id="frInput" value="Bonjour, le monde">
-    <button id="startBtn">开始录制视频</button>
+<div id="ui-controls">
+    <input type="text" id="cnInput" value="书山有路勤为径">
+    <input type="text" id="frInput" value="Le travail est la clef du succès">
+    <button id="startBtn">开始制作教学视频</button>
 </div>
 
 <div class="guide-box">
-    操作指引：点击按钮后，在弹窗中选择 <b>“此标签页 (This Tab)”</b>，并勾选左下角的 <b>“分享标签页音频”</b>。
+    提示：点击后请选择<b>“此标签页”</b>并勾选<b>“分享标签页音频”</b>。录制时我会自动隐藏按钮。
 </div>
 
 <div id="recording-stage">
@@ -55,14 +81,11 @@
     <div id="writer-grid"></div>
 </div>
 
-<div id="status-msg" style="margin-top:10px;">准备就绪</div>
-<a id="download-link">下载录制完成的视频 (含声音)</a>
+<a id="download-link">✅ 视频制作完成：点击下载 (含声音)</a>
 
 <script>
     const { pinyin } = pinyinPro;
     const startBtn = document.getElementById('startBtn');
-    const stage = document.getElementById('recording-stage');
-    const statusMsg = document.getElementById('status-msg');
     const downloadLink = document.getElementById('download-link');
 
     function speak(text) {
@@ -75,48 +98,44 @@
         });
     }
 
-    async function startRecording() {
+    async function startProcess() {
         const cn = document.getElementById('cnInput').value;
         const fr = document.getElementById('frInput').value;
         if(!cn) return;
 
         try {
-            // 1. 获取屏幕和音频流
+            // 1. 申请录制权限
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { displaySurface: "browser" },
-                audio: { 
-                    echoCancellation: false, 
-                    noiseSuppression: false, 
-                    autoGainControl: false 
-                }
+                audio: { echoCancellation: false }
             });
 
-            // 检查是否勾选了音频
             if (stream.getAudioTracks().length === 0) {
-                alert("未发现音频流！录制时请务必勾选“分享标签页音频”，否则视频将没有声音。");
+                alert("请记得勾选“分享标签页音频”！否则视频没声音。");
                 stream.getTracks().forEach(t => t.stop());
                 return;
             }
 
-            // 2. 初始化录制器
+            // 2. 隐藏 UI，舞台全屏化
+            document.body.classList.add('is-recording');
+            downloadLink.style.display = "none";
+
             const recorder = new MediaRecorder(stream, { 
                 mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 8000000 
+                videoBitsPerSecond: 10000000 // 提高到 10Mbps 极其清晰
             });
             const chunks = [];
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = "hanzi_lesson_hd.webm";
+                downloadLink.download = "chinois_lesson.webm";
                 downloadLink.style.display = "block";
-                statusMsg.innerText = "录制结束。";
+                document.body.classList.remove('is-recording');
                 startBtn.disabled = false;
             };
 
-            // 3. 准备 UI 内容
-            startBtn.disabled = true;
-            downloadLink.style.display = "none";
+            // 3. 准备内容
             document.getElementById('full-cn').innerText = cn;
             document.getElementById('full-fr').innerText = fr;
             const grid = document.getElementById('writer-grid');
@@ -127,47 +146,47 @@
                 const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
                 const unit = document.createElement('div');
                 unit.className = 'char-unit';
-                unit.innerHTML = `<div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div><div id="hz-${i}" class="writer-div"></div>`;
+                unit.innerHTML = `
+                    <div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div>
+                    <div id="hz-${i}" class="writer-div"></div>
+                `;
                 grid.appendChild(unit);
                 if (isHanzi) {
-                    writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { width: 60, height: 60, padding: 5, strokeAnimationSpeed: 2 }) });
+                    writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
+                        width: 90, height: 90, padding: 5, strokeAnimationSpeed: 2 
+                    }) });
                 } else {
-                    const target = document.getElementById(`hz-${i}`);
-                    target.innerHTML = `<span class="symbol-style">${char}</span>`;
+                    document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
 
-            // 4. 开始录制
-            statusMsg.innerText = "录制中...";
+            // 4. 正式录制
             recorder.start();
-
-            // 执行演示逻辑
-            await new Promise(r => setTimeout(r, 1000)); // 给用户一秒钟切换回来的时间
-            await speak(cn);
+            await new Promise(r => setTimeout(r, 1000)); // 缓冲
             
+            await speak(cn);
             for (let item of writers) {
                 if (item.type === 'hanzi') {
                     speak(item.char);
                     await item.instance.animateCharacter();
                 }
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 500));
             }
-            
             await speak(cn);
             await new Promise(r => setTimeout(r, 1000));
 
-            // 5. 停止
+            // 5. 结束
             recorder.stop();
             stream.getTracks().forEach(t => t.stop());
 
         } catch (err) {
+            document.body.classList.remove('is-recording');
             console.error(err);
-            statusMsg.innerText = "录制被取消或出错。";
         }
     }
 
-    startBtn.addEventListener('click', startRecording);
+    startBtn.addEventListener('click', startProcess);
 </script>
 
 </body>
