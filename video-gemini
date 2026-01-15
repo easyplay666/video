@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>视频录制程序（稳定优化版）</title>
+<style>
+    body { font-family: Arial; text-align: center; background: #f4f4f4; padding: 20px; }
+    /* 预览框设为固定比例，模拟录制效果 */
+    .video-container { width: 320px; height: 180px; background: black; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    #preview { width: 100%; height: 100%; object-fit: contain; }
+    .portrait-mode { width: 180px; height: 320px; }
+    button, select { margin: 5px; padding: 10px 15px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #timer { font-size: 24px; font-family: monospace; margin: 15px; color: #333; }
+    #download { display: none; margin-top: 15px; color: #007bff; text-decoration: none; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>视频录制程序（优化版）</h2>
+
+<div id="videoWrapper" class="video-container">
+    <video id="preview" autoplay muted playsinline></video>
+</div>
+
+<div>
+    <label for="orientation">录制画幅：</label>
+    <select id="orientation">
+        <option value="landscape">横屏 16:9</option>
+        <option value="portrait">竖屏 9:16</option>
+    </select>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+<div id="timer">00:00.000</div>
+
+<div>
+    <button id="startBtn">开始录制</button>
+    <button id="pauseBtn" disabled>暂停</button>
+    <button id="resumeBtn" disabled>继续</button>
+    <button id="stopBtn" disabled>停止</button>
+</div>
+
+<a id="download" href="#" download="recording.webm">⬇ 点击下载视频</a>
+
+<script>
+const preview = document.getElementById("preview");
+const videoWrapper = document.getElementById("videoWrapper");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const resumeBtn = document.getElementById("resumeBtn");
+const stopBtn = document.getElementById("stopBtn");
+const timerDisplay = document.getElementById("timer");
+const downloadLink = document.getElementById("download");
+const orientationSelect = document.getElementById("orientation");
+
+let stream, mediaRecorder, recordedChunks = [];
+let drawing = false;
+let timerInterval, startTime = 0, pausedTime = 0;
+
+/* 设置画布尺寸 */
+function setCanvasSize() {
+    if (orientationSelect.value === "portrait") {
+        canvas.width = 720; canvas.height = 1280;
+        videoWrapper.classList.add("portrait-mode");
+    } else {
+        canvas.width = 1280; canvas.height = 720;
+        videoWrapper.classList.remove("portrait-mode");
+    }
+}
+// 初始设置
+setCanvasSize();
+orientationSelect.onchange = setCanvasSize;
+
+/* 计时器优化 */
+function updateTimer() {
+    const elapsed = Date.now() - startTime;
+    const m = String(Math.floor(elapsed / 60000)).padStart(2, "0");
+    const s = String(Math.floor((elapsed % 60000)/1000)).padStart(2, "0");
+    const ms = String(elapsed % 1000).padStart(3, "0");
+    timerDisplay.textContent = `${m}:${s}.${ms}`;
+}
+
+function startTimer() {
+    startTime = Date.now() - pausedTime;
+    timerInterval = setInterval(updateTimer, 30);
+}
+
+/* 核心绘制函数：修正暂停后无法恢复的问题 */
+function drawCanvas() {
+    if (!drawing) return;
+    const vw = preview.videoWidth;
+    const vh = preview.videoHeight;
+    if(vw && vh){
+        ctx.fillStyle = "black";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        const scale = Math.min(canvas.width/vw, canvas.height/vh);
+        const w = vw*scale, h = vh*scale;
+        ctx.drawImage(preview, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
+    }
+    requestAnimationFrame(drawCanvas);
+}
+
+startBtn.onclick = async () => {
+    try {
+        recordedChunks = [];
+        pausedTime = 0;
+        downloadLink.style.display = "none";
+        
+        // 获取权限
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 1280, height: 720 }, 
+            audio: true 
+        });
+        preview.srcObject = stream;
+        await preview.play();
+
+        const canvasStream = canvas.captureStream(30);
+        // 合并音频
+        stream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
+
+        mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp8,opus' });
+        
+        mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.style.display = "block";
+            // 停止所有轨道
+            stream.getTracks().forEach(t => t.stop());
+        };
+
+        mediaRecorder.start();
+        drawing = true;
+        drawCanvas();
+        startTimer();
+
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+        orientationSelect.disabled = true; // 录制中禁止改方向
+    } catch (err) {
+        alert("错误: 无法访问摄像头或麦克风。请确保使用 HTTPS 协议访问。");
+    }
+};
+
+pauseBtn.onclick = () => {
+    mediaRecorder.pause();
+    drawing = false; 
+    clearInterval(timerInterval);
+    pausedTime = Date.now() - startTime;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = false;
+};
+
+resumeBtn.onclick = () => {
+    mediaRecorder.resume();
+    drawing = true;
+    drawCanvas(); // 重新触发绘制循环
+    startTimer();
+    resumeBtn.disabled = true;
+    pauseBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    drawing = false;
+    clearInterval(timerInterval);
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resumeBtn.disabled = true;
+    stopBtn.disabled = true;
+    orientationSelect.disabled = false;
+};
+</script>
+</body>
+</html>
