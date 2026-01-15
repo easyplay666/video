@@ -2,35 +2,24 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>HTML 视频录制（修复版）</title>
+<title>HTML 视频录制（逻辑整理版）</title>
 
 <style>
   body { font-family: Arial; text-align: center; margin-top: 20px; }
   canvas { border: 1px solid #ccc; }
-  button, select, input { margin: 5px; padding: 6px 10px; }
+  button { margin: 5px; padding: 8px 14px; }
+  #timer { font-size: 18px; margin-top: 10px; }
 </style>
 </head>
 
 <body>
 
-<h2>HTML 视频录制（暂停 / 尺寸 / 可换背景）</h2>
+<h2>HTML 视频录制（状态逻辑正确）</h2>
 
 <video id="camera" autoplay muted playsinline style="display:none"></video>
-<canvas id="canvas"></canvas>
-<br>
+<canvas id="canvas" width="1280" height="720"></canvas>
 
-<select id="format">
-  <option value="landscape">YouTube 横屏 (16:9)</option>
-  <option value="portrait">手机竖屏 (9:16)</option>
-</select>
-
-<select id="bgMode">
-  <option value="none">无背景</option>
-  <option value="color">纯色背景</option>
-  <option value="image">图片背景</option>
-</select>
-
-<input type="file" id="bgUpload" accept="image/*">
+<div id="timer">00:00</div>
 
 <br>
 
@@ -46,101 +35,105 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 let stream, recorder, chunks = [];
-let bgImage = new Image();
+let state = "idle";
 let drawing = false;
 
-function setCanvasSize() {
-  if (format.value === "portrait") {
-    canvas.width = 720;
-    canvas.height = 1280;
-  } else {
-    canvas.width = 1280;
-    canvas.height = 720;
-  }
+let seconds = 0;
+let timerInterval = null;
+
+// ====== 状态控制 ======
+function updateButtons() {
+  start.disabled  = !(state === "idle" || state === "stopped");
+  pause.disabled  = state !== "recording";
+  resume.disabled = state !== "paused";
+  stop.disabled   = !(state === "recording" || state === "paused");
 }
 
+// ====== 计时器 ======
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    timer.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+// ====== 绘制 ======
 function draw() {
   if (!drawing) return;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // 背景
-  if (bgMode.value === "color") {
-    ctx.fillStyle = "#2c3e50";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } else if (bgMode.value === "image" && bgImage.src) {
-    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-  }
-
-  // 人像视频
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-
-  if (vw && vh) {
-    const scale = Math.min(canvas.width / vw, canvas.height / vh);
-    const w = vw * scale;
-    const h = vh * scale;
-
-    ctx.drawImage(
-      video,
-      (canvas.width - w) / 2,
-      (canvas.height - h) / 2,
-      w,
-      h
-    );
-  }
-
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   requestAnimationFrame(draw);
 }
 
-// 上传背景图
-document.getElementById("bgUpload").onchange = e => {
-  const file = e.target.files[0];
-  if (file) {
-    bgImage.src = URL.createObjectURL(file);
-  }
-};
-
-// 开启摄像头
-document.getElementById("init").onclick = async () => {
+// ====== 初始化摄像头 ======
+init.onclick = async () => {
   stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   video.srcObject = stream;
+  await video.play();
 
-  await video.play(); // ⭐ 关键修复点
-
-  setCanvasSize();
-  drawing = true;
-  draw();
-
-  document.getElementById("start").disabled = false;
+  start.disabled = false;
 };
 
-// 开始录制
-document.getElementById("start").onclick = () => {
+// ====== 开始录制 ======
+start.onclick = () => {
+  chunks = [];
+  seconds = 0;
+  timer.textContent = "00:00";
+
   const canvasStream = canvas.captureStream(30);
   stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
 
   recorder = new MediaRecorder(canvasStream);
   recorder.ondataavailable = e => chunks.push(e.data);
-
   recorder.onstop = () => {
     const blob = new Blob(chunks, { type: "video/webm" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "recorded-video.webm";
     a.click();
-    chunks = [];
   };
 
   recorder.start();
-  pause.disabled = false;
-  stop.disabled = false;
+  state = "recording";
+  drawing = true;
+  draw();
+  startTimer();
+  updateButtons();
 };
 
-// 暂停 / 继续
-pause.onclick = () => recorder.pause();
-resume.onclick = () => recorder.resume();
-stop.onclick = () => recorder.stop();
+// ====== 暂停 ======
+pause.onclick = () => {
+  recorder.pause();
+  drawing = false;   // ⭐ 画面冻结
+  stopTimer();
+  state = "paused";
+  updateButtons();
+};
+
+// ====== 继续 ======
+resume.onclick = () => {
+  recorder.resume();
+  drawing = true;
+  draw();
+  startTimer();
+  state = "recording";
+  updateButtons();
+};
+
+// ====== 停止 ======
+stop.onclick = () => {
+  recorder.stop();
+  drawing = false;
+  stopTimer();
+  state = "stopped";
+  updateButtons();
+};
 </script>
 
 </body>
