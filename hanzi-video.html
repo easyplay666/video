@@ -2,19 +2,18 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字纯净教学视频录制器</title>
+    <title>汉字教学视频录制器-定制版</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
-        :root { --yt-red: #FF0000; }
+        :root { --yt-red: #cc0000; --paper: #fdf5e6; }
         body { 
-            font-family: "PingFang SC", "Microsoft YaHei", sans-serif; 
-            background: #1a1a1a; color: white; 
-            margin: 0; display: flex; flex-direction: column; align-items: center; 
-            overflow-x: hidden;
+            font-family: "PingFang SC", "Kaiti", "STKaiti", serif; 
+            background: #222; color: white; margin: 0; 
+            display: flex; flex-direction: column; align-items: center; 
         }
         
-        /* 控制区：录制时会被隐藏 */
+        /* UI控制区 */
         #ui-controls { 
             background: #333; padding: 20px; width: 100%; 
             display: flex; justify-content: center; gap: 10px; 
@@ -23,55 +22,49 @@
         input { width: 300px; padding: 12px; border: none; border-radius: 4px; font-size: 16px; }
         button { padding: 12px 24px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
         
-        /* 录制舞台：录制时它会占满全屏 */
+        /* 录制舞台：宣纸风格 */
         #recording-stage {
-            width: 1280px; height: 720px; /* 强制 16:9 高清比例 */
-            background: white; color: #333;
+            width: 1280px; height: 720px;
+            background-color: var(--paper);
+            background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png"); /* 增加宣纸纹理 */
+            color: #2c3e50;
             display: flex; flex-direction: column; 
-            padding: 60px; box-sizing: border-box;
-            transition: all 0.3s ease;
+            padding: 60px 80px; box-sizing: border-box;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* 隐藏 UI 时的样式调整 */
-        body.is-recording #ui-controls, 
-        body.is-recording .guide-box { 
-            display: none; 
-        }
+        /* 录制状态切换 */
+        body.is-recording #ui-controls, .guide-box { display: none; }
         body.is-recording #recording-stage {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            border-radius: 0; padding: 10vh 10vw;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; padding: 8vh 8vw;
         }
 
-        #header-area { border-bottom: 3px solid #eee; padding-bottom: 20px; margin-bottom: 40px; }
-        #full-cn { font-size: 48px; font-weight: bold; margin: 0; }
-        #full-fr { font-size: 28px; color: #666; margin-top: 10px; }
+        #header-area { border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 25px; margin-bottom: 45px; }
+        #full-cn { font-size: 46px; font-weight: bold; margin: 0; color: #1a1a1a; letter-spacing: 2px; }
+        #full-fr { font-size: 26px; color: #5d6d7e; margin-top: 12px; font-style: italic; }
         
-        #writer-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 100px; }
-        .pinyin-label { color: #e74c3c; font-size: 22px; font-weight: bold; height: 30px; margin-bottom: 5px; }
-        .writer-div { width: 90px; height: 90px; }
-        .symbol-style { font-size: 60px; font-weight: bold; line-height: 90px; }
+        #writer-grid { display: flex; flex-wrap: wrap; gap: 25px; justify-content: center; }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 110px; }
+        .pinyin-label { color: #b03a2e; font-size: 22px; font-weight: bold; height: 32px; margin-bottom: 8px; }
+        .writer-div { width: 100px; height: 100px; background: rgba(255,255,255,0.3); border-radius: 4px; }
+        .symbol-style { font-size: 60px; font-weight: bold; line-height: 100px; color: #333; }
 
-        .guide-box { margin: 15px; color: #ff9800; font-size: 14px; }
         #download-link { 
-            position: fixed; bottom: 20px; background: #27ae60; 
+            position: fixed; bottom: 30px; background: #27ae60; 
             padding: 15px 30px; color: white; border-radius: 50px; 
-            text-decoration: none; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            display: none; z-index: 200;
+            text-decoration: none; font-weight: bold; display: none; z-index: 200;
         }
     </style>
 </head>
 <body>
 
 <div id="ui-controls">
-    <input type="text" id="cnInput" value="书山有路勤为径">
-    <input type="text" id="frInput" value="Le travail est la clef du succès">
+    <input type="text" id="cnInput" value="岁寒知松柏">
+    <input type="text" id="frInput" value="C'est dans le froid que l'on connaît le pin">
     <button id="startBtn">开始制作教学视频</button>
 </div>
 
-<div class="guide-box">
-    提示：点击后请选择<b>“此标签页”</b>并勾选<b>“分享标签页音频”</b>。录制时我会自动隐藏按钮。
-</div>
+<div class="guide-box" style="margin:10px; color:#aaa;">提示：录制时请勾选“分享标签页音频”。正在书写的笔画将呈现为<b>深红色</b>。</div>
 
 <div id="recording-stage">
     <div id="header-area">
@@ -81,17 +74,18 @@
     <div id="writer-grid"></div>
 </div>
 
-<a id="download-link">✅ 视频制作完成：点击下载 (含声音)</a>
+<a id="download-link">✅ 视频已生成：点击下载 (含中法双语读音)</a>
 
 <script>
     const { pinyin } = pinyinPro;
     const startBtn = document.getElementById('startBtn');
     const downloadLink = document.getElementById('download-link');
 
-    function speak(text) {
+    // 语音合成函数
+    function speak(text, lang = 'zh-CN') {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-CN';
+            utterance.lang = lang;
             utterance.rate = 0.8;
             utterance.onend = resolve;
             window.speechSynthesis.speak(utterance);
@@ -104,38 +98,28 @@
         if(!cn) return;
 
         try {
-            // 1. 申请录制权限
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { displaySurface: "browser" },
                 audio: { echoCancellation: false }
             });
 
-            if (stream.getAudioTracks().length === 0) {
-                alert("请记得勾选“分享标签页音频”！否则视频没声音。");
-                stream.getTracks().forEach(t => t.stop());
-                return;
-            }
-
-            // 2. 隐藏 UI，舞台全屏化
             document.body.classList.add('is-recording');
-            downloadLink.style.display = "none";
-
+            
             const recorder = new MediaRecorder(stream, { 
                 mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 10000000 // 提高到 10Mbps 极其清晰
+                videoBitsPerSecond: 10000000 
             });
             const chunks = [];
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = "chinois_lesson.webm";
+                downloadLink.download = "french_chinese_lesson.webm";
                 downloadLink.style.display = "block";
                 document.body.classList.remove('is-recording');
-                startBtn.disabled = false;
             };
 
-            // 3. 准备内容
+            // 初始化画面
             document.getElementById('full-cn').innerText = cn;
             document.getElementById('full-fr').innerText = fr;
             const grid = document.getElementById('writer-grid');
@@ -146,43 +130,46 @@
                 const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
                 const unit = document.createElement('div');
                 unit.className = 'char-unit';
-                unit.innerHTML = `
-                    <div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div>
-                    <div id="hz-${i}" class="writer-div"></div>
-                `;
+                unit.innerHTML = `<div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div><div id="hz-${i}" class="writer-div"></div>`;
                 grid.appendChild(unit);
                 if (isHanzi) {
-                    writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
-                        width: 90, height: 90, padding: 5, strokeAnimationSpeed: 2 
-                    }) });
+                    const writer = HanziWriter.create(`hz-${i}`, char, { 
+                        width: 100, height: 100, padding: 5,
+                        strokeAnimationSpeed: 2,
+                        strokeColor: '#1a1a1a', // 写完后的颜色：深黑色
+                        drawingColor: '#b03a2e'  // 正在写的颜色：深红色
+                    });
+                    writers.push({ type: 'hanzi', char, instance: writer });
                 } else {
                     document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
 
-            // 4. 正式录制
             recorder.start();
-            await new Promise(r => setTimeout(r, 1000)); // 缓冲
+            await new Promise(r => setTimeout(r, 1000));
             
-            await speak(cn);
+            // 朗读流程
+            await speak(cn, 'zh-CN'); // 读中文全文
+            await speak(fr, 'fr-FR'); // 读法语全文
+            
             for (let item of writers) {
                 if (item.type === 'hanzi') {
-                    speak(item.char);
+                    speak(item.char, 'zh-CN');
                     await item.instance.animateCharacter();
                 }
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 400));
             }
-            await speak(cn);
+            
+            await speak(cn, 'zh-CN');
+            await speak(fr, 'fr-FR');
             await new Promise(r => setTimeout(r, 1000));
 
-            // 5. 结束
             recorder.stop();
             stream.getTracks().forEach(t => t.stop());
 
         } catch (err) {
             document.body.classList.remove('is-recording');
-            console.error(err);
         }
     }
 
