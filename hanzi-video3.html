@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字教学视频生成器-智能排版版</title>
+    <title>汉字教学视频生成器-稳定排版版</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
@@ -37,11 +37,11 @@
             position: relative; overflow: hidden;
         }
 
-        /* 预览比例 */
+        /* 预览模式比例 */
         .mode-youtube { width: 800px; height: 450px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 录制时锁定比例 */
+        /* 录制时比例锁定 */
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
         body.is-recording .mode-youtube { width: 177.78vh; height: 100vh; max-width: 100vw; }
@@ -56,25 +56,25 @@
         .logo-cn { font-size: 14px; font-weight: bold; color: #1a1a1a; }
         .logo-fr { font-size: 9px; color: var(--accent); }
 
-        /* 标题区 */
         #header-area { 
             border-bottom: 2px solid rgba(0,0,0,0.1); 
-            padding-bottom: 15px; margin-bottom: 20px; margin-top: 50px; text-align: center; 
+            padding-bottom: 15px; margin-bottom: 30px; margin-top: 50px; text-align: center; 
         }
         #full-cn { font-size: 28px; font-weight: bold; }
         #full-fr { font-size: 16px; color: #5d6d7e; font-style: italic; }
         
-        /* 核心：网格自动换行 */
+        /* 核心：标准间距网格 */
         #writer-grid { 
             display: flex; flex-wrap: wrap; 
-            gap: 15px; justify-content: center; align-content: center; 
+            gap: 10px; justify-content: center; align-content: center; 
             flex-grow: 1; width: 100%;
         }
 
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; padding: 12px 20px; color: white; border-radius: 8px; font-weight: bold; text-decoration: none; display: none; z-index: 3000; }
 
-        .char-unit { display: flex; flex-direction: column; align-items: center; }
-        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; }
+        /* 统一标准字号单位 */
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 105px; margin: 5px; }
+        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 25px; font-size: 18px; margin-bottom: 2px; }
         .writer-div { background: rgba(255,255,255,0.2); border-radius: 4px; border: 1px solid rgba(0,0,0,0.05); }
     </style>
 </head>
@@ -87,7 +87,7 @@
     </div>
     <input type="text" id="cnInput" value="厚德载物">
     <input type="text" id="frInput" value="La vertu porte tout">
-    <button id="startBtn">开始制作视频</button>
+    <button id="startBtn">开始制作</button>
 </div>
 
 <div id="stage-viewport">
@@ -131,22 +131,6 @@
         });
     }
 
-    // 智能计算尺寸：防止溢出
-    function calculateSizes(charCount, mode) {
-        if (mode === 'youtube') {
-            if (charCount <= 4) return { charSize: 180, pinyinSize: 32, unitWidth: 190 };
-            if (charCount <= 8) return { charSize: 120, pinyinSize: 22, unitWidth: 130 };
-            return { charSize: 80, pinyinSize: 16, unitWidth: 90 };
-        } else {
-            // 手机竖屏（宽度 360px 基准）
-            // 如果字数少，每行1-2个，字可以很大
-            if (charCount <= 2) return { charSize: 240, pinyinSize: 40, unitWidth: 260 };
-            if (charCount <= 4) return { charSize: 140, pinyinSize: 26, unitWidth: 150 }; // 每行2个
-            if (charCount <= 6) return { charSize: 130, pinyinSize: 24, unitWidth: 140 }; // 每行2个
-            return { charSize: 100, pinyinSize: 20, unitWidth: 110 }; // 每行3个
-        }
-    }
-
     async function startProcess() {
         const cn = document.getElementById('cnInput').value;
         const fr = document.getElementById('frInput').value;
@@ -180,25 +164,25 @@
             grid.innerHTML = '';
             
             const chars = cn.split('');
-            const size = calculateSizes(chars.length, currentMode);
+            // 采用统一的“稳定字号”：100px 汉字，适合手机窄屏也适合横屏长句
+            const charSize = 100;
             const writers = [];
 
             chars.forEach((char, i) => {
                 const isHanzi = /^[\u4e00-\u9fa5]$/.test(char);
                 const unit = document.createElement('div');
                 unit.className = 'char-unit';
-                unit.style.width = size.unitWidth + 'px';
                 unit.innerHTML = `
-                    <div class="pinyin-label" style="font-size: ${size.pinyinSize}px; height: ${size.pinyinSize + 10}px;">${isHanzi ? pinyin(char) : ""}</div>
-                    <div id="hz-${i}" class="writer-div" style="width: ${size.charSize}px; height: ${size.charSize}px;"></div>
+                    <div class="pinyin-label">${isHanzi ? pinyin(char) : ""}</div>
+                    <div id="hz-${i}" class="writer-div" style="width: ${charSize}px; height: ${charSize}px;"></div>
                 `;
                 grid.appendChild(unit);
                 if (isHanzi) {
                     writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
-                        width: size.charSize, height: size.charSize, strokeColor: '#1a1a1a', drawingColor: '#b03a2e', strokeAnimationSpeed: 2 
+                        width: charSize, height: charSize, strokeColor: '#1a1a1a', drawingColor: '#b03a2e', strokeAnimationSpeed: 2 
                     }) });
                 } else {
-                    document.getElementById(`hz-${i}`).innerHTML = `<span style="font-size:${size.charSize*0.8}px;line-height:${size.charSize}px;font-weight:bold;color:#333">${char}</span>`;
+                    document.getElementById(`hz-${i}`).innerHTML = `<span style="font-size:70px;line-height:100px;font-weight:bold;color:#333">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
