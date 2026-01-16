@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字教学-文字充满版</title>
+    <title>汉字教学-6列高容量版</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
@@ -36,14 +36,14 @@
             background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
             color: #2c3e50;
             display: flex; flex-direction: column; 
-            padding: 30px; box-sizing: border-box;
+            padding: 25px; box-sizing: border-box; /* 略微缩小内边距 */
             position: relative; overflow: hidden;
         }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 录制模式 */
+        /* 录制模式比例锁定 */
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
         body.is-recording .mode-youtube { width: 177.78vh; height: 100vh; max-width: 100vw; }
@@ -51,39 +51,38 @@
 
         /* 图标区 */
         #logo-area {
-            position: absolute; top: 15px; left: 15px;
+            position: absolute; top: 12px; left: 15px;
             display: flex; align-items: center; gap: 8px; z-index: 10;
         }
-        .logo-icon { width: 30px; height: 30px; background: var(--accent); color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
-        .logo-cn { font-size: 13px; font-weight: bold; color: #1a1a1a; }
+        .logo-icon { width: 26px; height: 26px; background: var(--accent); color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; }
+        .logo-cn { font-size: 12px; font-weight: bold; color: #1a1a1a; }
         .logo-fr { font-size: 8px; color: var(--accent); }
 
         #header-area { 
             border-bottom: 1px solid rgba(0,0,0,0.1); 
-            padding-bottom: 10px; margin-bottom: 15px; margin-top: 40px; text-align: center; 
+            padding-bottom: 8px; margin-bottom: 12px; margin-top: 35px; text-align: center; 
         }
-        #full-cn { font-size: 20px; font-weight: bold; margin: 0; }
-        #full-fr { font-size: 14px; color: #5d6d7e; margin-top: 5px; font-style: italic; }
+        #full-cn { font-size: 18px; font-weight: bold; margin: 0; }
+        #full-fr { font-size: 12px; color: #5d6d7e; margin-top: 3px; font-style: italic; }
         
-        /* 字符矩阵 */
+        /* 字符矩阵：确保每行6个 */
         #writer-grid { 
             display: flex; flex-wrap: wrap; 
-            gap: 10px; justify-content: flex-start; align-content: flex-start; 
+            gap: 6px; justify-content: center; align-content: flex-start; 
             flex-grow: 1; width: 100%;
         }
 
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; padding: 12px 20px; color: white; border-radius: 8px; font-weight: bold; text-decoration: none; display: none; z-index: 3000; }
 
         /* 字符单位样式 */
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 62px; }
-        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 18px; font-size: 13px; margin-bottom: 2px; }
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 54px; }
+        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 16px; font-size: 11px; margin-bottom: 1px; }
         
-        /* 重点：去掉方框内部间隙，让汉字充满 */
         .writer-div { 
             background: rgba(255,255,255,0.6); 
             border: 1px solid #ccc; 
             box-sizing: border-box;
-            line-height: 0; /* 防止行高产生间隙 */
+            line-height: 0;
         }
         .writer-div svg { width: 100% !important; height: 100% !important; }
 
@@ -97,8 +96,8 @@
         <button id="btn-yt" class="ratio-btn active" onclick="setMode('youtube')">YouTube</button>
         <button id="btn-mb" class="ratio-btn" onclick="setMode('mobile')">手机竖屏</button>
     </div>
-    <input type="text" id="cnInput" value="学而时习之不亦说乎有朋自远方来不亦乐乎">
-    <input type="text" id="frInput" value="Apprendre est une grande joie">
+    <input type="text" id="cnInput" value="学而时习之不亦说乎有朋自远方来不亦乐乎人不知而不愠">
+    <input type="text" id="frInput" value="Apprendre et pratiquer sans cesse est une joie.">
     <button id="startBtn">开始制作</button>
 </div>
 
@@ -176,7 +175,7 @@
             grid.innerHTML = '';
             
             const chars = cn.split('');
-            const charSize = 60; // 方框大小
+            const charSize = 54; // 每行6个的最佳方框大小
             const writers = [];
 
             chars.forEach((char, i) => {
@@ -190,15 +189,11 @@
                 grid.appendChild(unit);
                 if (isHanzi) {
                     writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
-                        width: charSize, 
-                        height: charSize, 
-                        padding: 0, // 重点：取消内边距让文字充满
-                        strokeColor: '#1a1a1a', 
-                        drawingColor: '#cc0000', 
-                        strokeAnimationSpeed: 2.5 
+                        width: charSize, height: charSize, padding: 0,
+                        strokeColor: '#1a1a1a', drawingColor: '#cc0000', strokeAnimationSpeed: 2.8 
                     }) });
                 } else {
-                    document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style" style="font-size:45px;line-height:${charSize}px;">${char}</span>`;
+                    document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style" style="font-size:38px;line-height:${charSize}px;">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
