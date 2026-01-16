@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字教学-高容量版</title>
+    <title>汉字教学-文字充满版</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
@@ -11,9 +11,10 @@
             font-family: "PingFang SC", "Kaiti", "STKaiti", serif; 
             background: #1a1a1a; color: white; margin: 0; 
             display: flex; flex-direction: column; align-items: center;
+            overflow-x: hidden;
         }
         
-        /* 控制区 */
+        /* UI控制区 */
         #ui-controls { 
             background: #333; padding: 15px; width: 100%; 
             display: flex; justify-content: center; align-items: center; gap: 15px; 
@@ -39,7 +40,6 @@
             position: relative; overflow: hidden;
         }
 
-        /* 比例定义 */
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
@@ -49,7 +49,7 @@
         body.is-recording .mode-youtube { width: 177.78vh; height: 100vh; max-width: 100vw; }
         body.is-recording .mode-mobile { width: 56.25vh; height: 100vh; max-height: 177.78vw; }
 
-        /* 图标区 - 缩小以腾出空间 */
+        /* 图标区 */
         #logo-area {
             position: absolute; top: 15px; left: 15px;
             display: flex; align-items: center; gap: 8px; z-index: 10;
@@ -60,24 +60,34 @@
 
         #header-area { 
             border-bottom: 1px solid rgba(0,0,0,0.1); 
-            padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; text-align: center; 
+            padding-bottom: 10px; margin-bottom: 15px; margin-top: 40px; text-align: center; 
         }
-        #full-cn { font-size: 22px; font-weight: bold; margin: 0; }
+        #full-cn { font-size: 20px; font-weight: bold; margin: 0; }
         #full-fr { font-size: 14px; color: #5d6d7e; margin-top: 5px; font-style: italic; }
         
-        /* 字符矩阵 - 支持多字平铺 */
+        /* 字符矩阵 */
         #writer-grid { 
             display: flex; flex-wrap: wrap; 
-            gap: 8px; justify-content: flex-start; align-content: flex-start; 
+            gap: 10px; justify-content: flex-start; align-content: flex-start; 
             flex-grow: 1; width: 100%;
         }
 
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; padding: 12px 20px; color: white; border-radius: 8px; font-weight: bold; text-decoration: none; display: none; z-index: 3000; }
 
-        /* 紧凑型字符单位 */
-        .char-unit { display: flex; flex-direction: column; align-items: center; width: 58px; margin-bottom: 5px; }
-        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 18px; font-size: 12px; margin-bottom: 2px; }
-        .writer-div { background: rgba(255,255,255,0.4); border: 1px solid rgba(0,0,0,0.05); }
+        /* 字符单位样式 */
+        .char-unit { display: flex; flex-direction: column; align-items: center; width: 62px; }
+        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 18px; font-size: 13px; margin-bottom: 2px; }
+        
+        /* 重点：去掉方框内部间隙，让汉字充满 */
+        .writer-div { 
+            background: rgba(255,255,255,0.6); 
+            border: 1px solid #ccc; 
+            box-sizing: border-box;
+            line-height: 0; /* 防止行高产生间隙 */
+        }
+        .writer-div svg { width: 100% !important; height: 100% !important; }
+
+        .symbol-style { font-weight: bold; color: #333; display: block; text-align: center; }
     </style>
 </head>
 <body>
@@ -87,8 +97,8 @@
         <button id="btn-yt" class="ratio-btn active" onclick="setMode('youtube')">YouTube</button>
         <button id="btn-mb" class="ratio-btn" onclick="setMode('mobile')">手机竖屏</button>
     </div>
-    <input type="text" id="cnInput" value="学而时习之不亦说乎有朋自远方来不亦乐乎" placeholder="输入长句子...">
-    <input type="text" id="frInput" value="Apprendre et pratiquer, n'est-ce pas une joie ?" placeholder="输入法语...">
+    <input type="text" id="cnInput" value="学而时习之不亦说乎有朋自远方来不亦乐乎">
+    <input type="text" id="frInput" value="Apprendre est une grande joie">
     <button id="startBtn">开始制作</button>
 </div>
 
@@ -155,7 +165,7 @@
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = `hanzi_lesson.webm`;
+                downloadLink.download = `lesson.webm`;
                 downloadLink.style.display = "block";
                 document.body.classList.remove('is-recording');
             };
@@ -166,8 +176,7 @@
             grid.innerHTML = '';
             
             const chars = cn.split('');
-            // 固定小字号：确保能放下30个字
-            const charSize = 55;
+            const charSize = 60; // 方框大小
             const writers = [];
 
             chars.forEach((char, i) => {
@@ -181,10 +190,15 @@
                 grid.appendChild(unit);
                 if (isHanzi) {
                     writers.push({ type: 'hanzi', char, instance: HanziWriter.create(`hz-${i}`, char, { 
-                        width: charSize, height: charSize, strokeColor: '#1a1a1a', drawingColor: '#cc0000', strokeAnimationSpeed: 2.5 
+                        width: charSize, 
+                        height: charSize, 
+                        padding: 0, // 重点：取消内边距让文字充满
+                        strokeColor: '#1a1a1a', 
+                        drawingColor: '#cc0000', 
+                        strokeAnimationSpeed: 2.5 
                     }) });
                 } else {
-                    document.getElementById(`hz-${i}`).innerHTML = `<span style="font-size:35px;line-height:55px;font-weight:bold;color:#333">${char}</span>`;
+                    document.getElementById(`hz-${i}`).innerHTML = `<span class="symbol-style" style="font-size:45px;line-height:${charSize}px;">${char}</span>`;
                     writers.push({ type: 'symbol' });
                 }
             });
