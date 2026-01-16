@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>汉字教学-6列高容量版</title>
+    <title>汉字教学-高清拼音版</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="https://unpkg.com/pinyin-pro"></script>
     <style>
@@ -26,7 +26,7 @@
         input { width: 250px; padding: 10px; border: none; border-radius: 4px; }
         #startBtn { padding: 10px 20px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
-        /* 视频舞台 */
+        /* 视频舞台容器 */
         #stage-viewport {
             margin: 20px auto; display: flex; justify-content: center; align-items: center; background: #000;
         }
@@ -36,7 +36,7 @@
             background-image: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
             color: #2c3e50;
             display: flex; flex-direction: column; 
-            padding: 25px; box-sizing: border-box; /* 略微缩小内边距 */
+            padding: 20px 25px; box-sizing: border-box; 
             position: relative; overflow: hidden;
         }
 
@@ -65,7 +65,7 @@
         #full-cn { font-size: 18px; font-weight: bold; margin: 0; }
         #full-fr { font-size: 12px; color: #5d6d7e; margin-top: 3px; font-style: italic; }
         
-        /* 字符矩阵：确保每行6个 */
+        /* 字符矩阵 */
         #writer-grid { 
             display: flex; flex-wrap: wrap; 
             gap: 6px; justify-content: center; align-content: flex-start; 
@@ -76,11 +76,23 @@
 
         /* 字符单位样式 */
         .char-unit { display: flex; flex-direction: column; align-items: center; width: 54px; }
-        .pinyin-label { color: var(--accent); font-weight: bold; text-align: center; height: 16px; font-size: 11px; margin-bottom: 1px; }
+        
+        /* 改进：拼音更大、加粗 */
+        .pinyin-label { 
+            color: var(--accent); 
+            font-weight: bold; 
+            text-align: center; 
+            height: 22px; 
+            font-size: 16px; 
+            line-height: 22px;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px; /* 紧凑排列防止溢出 */
+        }
         
         .writer-div { 
             background: rgba(255,255,255,0.6); 
             border: 1px solid #ccc; 
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.05);
             box-sizing: border-box;
             line-height: 0;
         }
@@ -96,8 +108,8 @@
         <button id="btn-yt" class="ratio-btn active" onclick="setMode('youtube')">YouTube</button>
         <button id="btn-mb" class="ratio-btn" onclick="setMode('mobile')">手机竖屏</button>
     </div>
-    <input type="text" id="cnInput" value="学而时习之不亦说乎有朋自远方来不亦乐乎人不知而不愠">
-    <input type="text" id="frInput" value="Apprendre et pratiquer sans cesse est une joie.">
+    <input type="text" id="cnInput" value="厚德载物自强不息">
+    <input type="text" id="frInput" value="La vertu porte tout, l'effort ne s'arrête jamais.">
     <button id="startBtn">开始制作</button>
 </div>
 
@@ -175,7 +187,7 @@
             grid.innerHTML = '';
             
             const chars = cn.split('');
-            const charSize = 54; // 每行6个的最佳方框大小
+            const charSize = 54; 
             const writers = [];
 
             chars.forEach((char, i) => {
