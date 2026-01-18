@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>双语教学视频-视觉片头版</title>
+    <title>双语教学视频-智能断词版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -46,67 +46,43 @@
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 片头动画样式 */
+        /* 片头样式 */
         #intro-screen {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: var(--intro-bg);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 100;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--intro-bg); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 100;
             transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #intro-screen.hidden {
-            transform: translateY(-100%); /* 向上滑动退出 */
-        }
-
-        /* 艺术文字 */
-        .intro-text-box { text-align: center; z-index: 2; }
-        .intro-title-fr {
-            font-family: 'Cinzel', serif;
-            font-size: 42px; color: #fff;
-            margin-bottom: 5px; opacity: 0;
-            animation: slideUpFade 1s ease forwards 0.3s;
-        }
-        .intro-title-zh {
-            font-family: 'ZCOOL KuaiLe', cursive;
-            font-size: 38px; color: #e67e22;
-            opacity: 0;
-            animation: slideUpFade 1s ease forwards 0.8s;
-        }
-
-        /* 动态装饰 */
-        .decor {
-            position: absolute; border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 50%; animation: ripple 3s infinite;
-        }
-        @keyframes ripple {
-            0% { width: 0; height: 0; opacity: 0.5; }
-            100% { width: 500px; height: 500px; opacity: 0; }
-        }
-
-        @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        #intro-screen.hidden { transform: translateY(-100%); }
+        .intro-title-fr { font-family: 'Cinzel', serif; font-size: 42px; color: #fff; opacity: 0; animation: slideUpFade 1s ease forwards 0.3s; }
+        .intro-title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 38px; color: #e67e22; opacity: 0; animation: slideUpFade 1s ease forwards 0.8s; }
 
         /* 教学内容样式 */
         .line-wrapper {
             margin-bottom: 12px; padding: 4px 10px; border-radius: 4px;
-            transition: all 0.4s ease; word-break: break-all; border-left: 4px solid transparent;
+            transition: all 0.4s ease; border-left: 4px solid transparent;
+            /* 关键修改：智能断词 */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
+
         .text-content { font-size: 20px; }
-        .lang-fr { color: var(--fr-color); font-style: italic; }
-        .lang-zh { color: var(--zh-color); font-weight: 500; }
 
-        .line-wrapper.active {
-            background: rgba(204, 0, 0, 0.05);
-            border-left: 4px solid var(--yt-red);
+        /* 法语专属断词规则 */
+        .lang-fr { 
+            color: var(--fr-color); 
+            font-style: italic;
+            hyphens: auto; /* 开启自动连字符 */
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+            text-align: justify; /* 两端对齐能更好地展示断词效果 */
         }
-        .line-wrapper.active .text-content {
-            color: var(--yt-red) !important; font-weight: bold;
-        }
+        .lang-zh { color: var(--zh-color); font-weight: 500; hyphens: none; }
 
+        .line-wrapper.active { background: rgba(204, 0, 0, 0.05); border-left: 4px solid var(--yt-red); }
+        .line-wrapper.active .text-content { color: var(--yt-red) !important; font-weight: bold; }
+
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 3000; }
@@ -120,20 +96,17 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Bonjour tout le monde !
-大家好！
-Bienvenue dans cette leçon.
-欢迎来到这节课。
-Aujourd'hui, nous avons un beau générique.
-今天我们有一个漂亮的开头。
-C'est simple et élégant.
-它既简单又优雅。</textarea>
+    <textarea id="multiInput">L'apprentissage du français est extraordinaire.
+学习法语是非常棒的。
+C'est une expérience magnifique et enrichissante.
+这是一次美妙而充实的体验。
+Nous étudions la grammaire et le vocabulaire.
+我们学习语法和词汇。</textarea>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
         <div id="intro-screen">
-            <div class="decor"></div>
             <div class="intro-text-box">
                 <div class="intro-title-fr">Le Français</div>
                 <div class="intro-title-zh">中法双语课堂</div>
@@ -173,11 +146,7 @@ C'est simple et élégant.
         if(!lines.length) return;
 
         try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({
-                video: { displaySurface: "browser" },
-                audio: true
-            });
-
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
             document.body.classList.add('is-recording');
             const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
             const chunks = [];
@@ -190,30 +159,33 @@ C'est simple et élégant.
                 introScreen.classList.remove('hidden');
             };
 
-            // 1. 初始化并开始录制
             introScreen.classList.remove('hidden');
             contentList.innerHTML = '';
             recorder.start();
 
-            // 2. 纯视觉片头展示 3 秒
             await new Promise(r => setTimeout(r, 3000));
-
-            // 3. 片头向上滑动隐藏
             introScreen.classList.add('hidden');
             
-            // 4. 加载教学内容
+            // 核心逻辑修改点：为法语添加 lang 属性
             const elements = lines.map(text => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'line-wrapper';
-                const langClass = isChinese(text) ? 'lang-zh' : 'lang-fr';
-                wrapper.innerHTML = `<div class="text-content ${langClass}">${text}</div>`;
+                const isZh = isChinese(text);
+                const langClass = isZh ? 'lang-zh' : 'lang-fr';
+                
+                // 创建内容并设置 lang 属性以触发浏览器断词引擎
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `text-content ${langClass}`;
+                if (!isZh) contentDiv.setAttribute('lang', 'fr'); 
+                contentDiv.innerText = text;
+                
+                wrapper.appendChild(contentDiv);
                 contentList.appendChild(wrapper);
                 return wrapper;
             });
             
-            await new Promise(r => setTimeout(r, 800)); // 等待片头滑走动画完成
+            await new Promise(r => setTimeout(r, 800));
 
-            // 5. 阅读循环
             for (let i = 0; i < elements.length; i++) {
                 const el = elements[i];
                 el.classList.add('active');
@@ -226,7 +198,6 @@ C'est simple et élégant.
             await new Promise(r => setTimeout(r, 1000));
             recorder.stop();
             stream.getTracks().forEach(t => t.stop());
-
         } catch (e) {
             document.body.classList.remove('is-recording');
             introScreen.classList.remove('hidden');
