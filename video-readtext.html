@@ -2,20 +2,17 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>双语教学视频-艺术背景版</title>
+    <title>双语教学视频-艺术背景修正版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
             --yt-red: #cc0000; 
             --paper-bg: #fdfaf3; 
-            --line-color: #e0e0e0;
+            --line-color: rgba(0,0,0,0.08); /* 使用半透明横线 */
             --zh-color: #333333;
             --fr-color: #1a5276;
             --line-height: 38px;
             --intro-bg: radial-gradient(circle, #2c3e50 0%, #000000 100%);
-            /* 新增背景艺术色 */
-            --art-bg-color-1: rgba(220, 240, 255, 0.4); /* 浅蓝色半透明 */
-            --art-bg-color-2: rgba(255, 230, 200, 0.4); /* 浅橘色半透明 */
         }
         
         body { 
@@ -25,18 +22,16 @@
         }
         
         /* UI控制区 */
-        #ui-controls { 
-            background: #222; padding: 15px; width: 100%; 
-            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000;
-        }
+        #ui-controls { background: #222; padding: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000; }
         textarea { width: 90%; max-width: 800px; height: 80px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
-        /* 视频舞台 */
         #stage-viewport { margin: 10px auto; display: flex; justify-content: center; align-items: center; background: #000; }
         
+        /* 核心舞台 */
         #recording-stage {
             background-color: var(--paper-bg);
+            /* 将横线设为顶层背景，但保持透明 */
             background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
             background-size: 100% var(--line-height); 
             padding: 100px 45px; 
@@ -44,41 +39,34 @@
             position: relative; 
             overflow: hidden;
             line-height: var(--line-height);
-            /* 关键修改：信纸层级和背景色 */
-            z-index: 10;
+            z-index: 1;
         }
 
-        /* 艺术背景容器 */
-        #art-background {
+        /* --- 艺术背景层：位于横线和文字下方 --- */
+        #art-layer {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; /* 关键：确保在内容和横线之下 */
             overflow: hidden;
-            z-index: 5; /* 确保在信纸之下 */
-            filter: blur(10px) brightness(1.2); /* 增加模糊和亮度，使其更柔和、抽象 */
-        }
-
-        .art-shape {
-            position: absolute;
-            background: linear-gradient(45deg, var(--art-bg-color-1), var(--art-bg-color-2));
-            border-radius: 50%; /* 圆形 */
             opacity: 0.6;
-            animation: floatAndFade 20s infinite ease-in-out alternate;
-        }
-        .shape-1 { width: 250px; height: 250px; top: -50px; left: -50px; animation-delay: 0s; }
-        .shape-2 { width: 300px; height: 300px; bottom: -80px; right: -80px; animation-delay: 5s; }
-        .shape-3 { width: 180px; height: 180px; top: 30%; right: -60px; animation-delay: 10s; }
-        .shape-4 { width: 200px; height: 200px; bottom: -30px; left: 10%; animation-delay: 15s; }
-
-        @keyframes floatAndFade {
-            0% { transform: translate(0, 0) scale(0.9); opacity: 0.5; }
-            50% { transform: translate(20px, 30px) scale(1.1); opacity: 0.8; }
-            100% { transform: translate(0, 0) scale(0.9); opacity: 0.5; }
         }
 
+        .blob {
+            position: absolute;
+            filter: blur(40px);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: move 15s infinite alternate ease-in-out;
+        }
+        /* 设计几个不同颜色的水彩感色块 */
+        .blob-1 { width: 300px; height: 300px; background: #ffdfba; top: -50px; left: -50px; }
+        .blob-2 { width: 400px; height: 400px; background: #bae1ff; bottom: -100px; right: -50px; animation-delay: -2s; }
+        .blob-3 { width: 250px; height: 250px; background: #f2ccff; top: 40%; left: 60%; animation-delay: -5s; }
 
-        .mode-youtube { width: 854px; height: 480px; }
-        .mode-mobile { width: 360px; height: 640px; }
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(40px, 50px) scale(1.2); }
+        }
 
         /* 片头样式 */
         #intro-screen {
@@ -88,35 +76,20 @@
             transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #intro-screen.hidden { transform: translateY(-100%); }
-        .intro-title-fr { font-family: 'Cinzel', serif; font-size: 42px; color: #fff; opacity: 0; animation: slideUpFade 1s ease forwards 0.3s; }
-        .intro-title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 38px; color: #e67e22; opacity: 0; animation: slideUpFade 1s ease forwards 0.8s; }
+        .intro-title-fr { font-family: 'Cinzel', serif; font-size: 42px; color: #fff; animation: slideUpFade 1s ease forwards 0.3s; opacity: 0; }
+        .intro-title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 38px; color: #e67e22; animation: slideUpFade 1s ease forwards 0.8s; opacity: 0; }
 
-        /* 句子块样式 */
-        #content-list { display: block; }
+        /* 内容样式 */
         .sentence-unit {
-            display: inline; 
-            font-size: 21px;
-            transition: all 0.3s ease;
-            cursor: default;
-            padding: 2px 0;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+            display: inline; font-size: 21px; transition: all 0.3s ease;
+            padding: 2px 0; word-wrap: break-word; position: relative; z-index: 2;
         }
-
-        .lang-fr { 
-            color: var(--fr-color); 
-            font-style: italic;
-            hyphens: auto;
-            -webkit-hyphens: auto;
-        }
+        .lang-fr { color: var(--fr-color); font-style: italic; hyphens: auto; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
+        .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(255, 255, 255, 0.5); }
 
-        .sentence-unit.active {
-            color: var(--yt-red) !important;
-            font-weight: bold;
-            background: rgba(204, 0, 0, 0.08); 
-        }
-
+        .mode-youtube { width: 854px; height: 480px; }
+        .mode-mobile { width: 360px; height: 640px; }
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
@@ -131,26 +104,25 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Bonjour tout le monde. Comment ça va ? J'espère que vous allez bien !
-大家好。你们好吗？我希望你们一切都好！
-Apprendre le français est un voyage magnifique. C'est une langue pleine de poésie.
-学习法语是一段美妙的旅程。这是一门充满诗意的语言。</textarea>
+    <textarea id="multiInput">Bonjour tout le monde. C'est un bel arrière-plan !
+大家好。这是一个精美的背景！
+L'art et la langue se rencontrent ici.
+艺术与语言在这里相遇。
+Bonne chance pour votre apprentissage.
+祝大家学习顺利。</textarea>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
-        <div id="intro-screen">
-            <div class="intro-text-box">
-                <div class="intro-title-fr">Le Français</div>
-                <div class="intro-title-zh">中法双语课堂</div>
-            </div>
+        <div id="art-layer">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
         </div>
-        
-        <div id="art-background">
-            <div class="art-shape shape-1"></div>
-            <div class="art-shape shape-2"></div>
-            <div class="art-shape shape-3"></div>
-            <div class="art-shape shape-4"></div>
+
+        <div id="intro-screen">
+            <div class="intro-title-fr">Le Français Art</div>
+            <div class="intro-title-zh">艺术双语课堂</div>
         </div>
 
         <div id="content-list"></div>
@@ -163,23 +135,16 @@ Apprendre le français est un voyage magnifique. C'est une langue pleine de poé
     const stage = document.getElementById('recording-stage');
     const contentList = document.getElementById('content-list');
     const introScreen = document.getElementById('intro-screen');
-    const artBackground = document.getElementById('art-background'); // 获取艺术背景元素
 
     function setMode(mode) {
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
     }
 
-    function isChinese(text) {
-        return /[\u4e00-\u9fa5]/.test(text);
-    }
-
-    function cleanTextForSpeech(text) {
-        return text.replace(/[.,!?;:。，！？；：]/g, ' ');
-    }
+    function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
 
     function speak(text) {
         return new Promise((resolve) => {
-            const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
+            const utterance = new SpeechSynthesisUtterance(text.replace(/[.,!?;:。，！？；：]/g, ' '));
             utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
             utterance.rate = 0.85;
             utterance.onend = resolve;
@@ -187,27 +152,20 @@ Apprendre le français est un voyage magnifique. C'est une langue pleine de poé
         });
     }
 
-    function splitIntoSentences(text) {
-        return text.match(/[^.!?。！？]+[.!?。！？]*/g) || [text];
-    }
-
     async function startProcess() {
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
-        
         contentList.innerHTML = '';
         const allSentenceData = [];
 
         paragraphs.forEach(pText => {
             const pWrapper = document.createElement('div');
             pWrapper.style.marginBottom = '20px';
-            
-            const sentences = splitIntoSentences(pText);
+            const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
             sentences.forEach(sText => {
                 const span = document.createElement('span');
                 const isZh = isChinese(sText);
                 span.className = `sentence-unit ${isZh ? 'lang-zh' : 'lang-fr'}`;
-                if (!isZh) span.setAttribute('lang', 'fr');
                 span.innerText = sText + " ";
                 pWrapper.appendChild(span);
                 allSentenceData.push({ element: span, text: sText });
@@ -226,25 +184,16 @@ Apprendre le français est un voyage magnifique. C'est une langue pleine de poé
                 document.getElementById('download-link').href = URL.createObjectURL(blob);
                 document.getElementById('download-link').style.display = 'block';
                 document.body.classList.remove('is-recording');
-                introScreen.classList.remove('hidden');
             };
 
             recorder.start();
-            
-            // 在片头期间隐藏艺术背景，切换到教学时再显示
-            artBackground.style.display = 'none'; 
-
             await new Promise(r => setTimeout(r, 3000));
             introScreen.classList.add('hidden');
-            
-            artBackground.style.display = 'block'; // 片头结束后显示艺术背景
-
             await new Promise(r => setTimeout(r, 800));
 
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 data.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
                 await speak(data.text);
                 await new Promise(r => setTimeout(r, 400));
                 data.element.classList.remove('active');
@@ -255,11 +204,8 @@ Apprendre le français est un voyage magnifique. C'est une langue pleine de poé
             stream.getTracks().forEach(t => t.stop());
         } catch (e) {
             document.body.classList.remove('is-recording');
-            introScreen.classList.remove('hidden');
-            artBackground.style.display = 'block'; // 错误时也确保艺术背景显示
         }
     }
-
     document.getElementById('startBtn').addEventListener('click', startProcess);
 </script>
 
