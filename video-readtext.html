@@ -2,19 +2,19 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>逐字高亮智能滚动教学版</title>
+    <title>双语教学视频-稳定高亮版</title>
     <style>
         :root { 
-            --yt-red: #ff0000; 
+            --yt-red: #cc0000; 
             --paper-bg: #fdfaf3; 
-            --line-color: #e8e8e8;
-            --zh-color: #333;
-            --fr-color: #2e5984;
-            --safe-margin: 80px; /* 安全区域高度 */
+            --line-color: #e0e0e0;
+            --zh-color: #333333;
+            --fr-color: #1a5276;
+            --line-height: 36px; /* 统一行高 */
         }
         
         body { 
-            font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif; 
+            font-family: "Georgia", "Times New Roman", "PingFang SC", "STKaiti", serif; 
             background: #111; color: white; margin: 0; 
             display: flex; flex-direction: column; align-items: center;
         }
@@ -24,73 +24,80 @@
             background: #222; padding: 15px; width: 100%; 
             display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000;
         }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; }
-        #startBtn { padding: 10px 25px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        textarea { width: 90%; max-width: 800px; height: 80px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
+        #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         /* 视频舞台 */
         #stage-viewport { margin: 10px auto; display: flex; justify-content: center; align-items: center; background: #000; }
         
         #recording-stage {
             background-color: var(--paper-bg);
+            /* 背景横线对齐 */
             background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
-            background-size: 100% 36px; 
-            padding: var(--safe-margin) 40px; /* 上下留出安全空间 */
+            background-size: 100% var(--line-height); 
+            padding: 100px 40px; /* 上下预留大量安全空间，防止贴边 */
             box-sizing: border-box; 
             position: relative; 
-            overflow-y: hidden; /* 由JS控制平滑滚动 */
-            line-height: 36px;
-            display: block;
+            overflow-y: hidden; /* 录制时由JS平滑控制 */
+            line-height: var(--line-height);
         }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 逐字样式 */
-        .word-unit {
-            display: inline-block;
-            font-size: 20px;
-            transition: color 0.2s;
-            margin-right: 2px;
-            white-space: pre-wrap;
-        }
-        
-        .line-block {
+        /* 内容块样式 */
+        .line-wrapper {
             margin-bottom: 12px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            transition: all 0.4s ease;
             word-break: break-all;
-            opacity: 0.9;
+            white-space: normal;
+            border-left: 4px solid transparent;
         }
 
-        /* 语种颜色 */
-        .zh-text { color: var(--zh-color); font-weight: 500; }
-        .fr-text { color: var(--fr-color); font-style: italic; font-family: "Georgia", serif; }
+        .text-content {
+            font-size: 20px; /* 适中的字号 */
+            transition: color 0.4s ease;
+        }
 
-        /* 激活的高亮状态 */
-        .word-unit.active {
+        /* 语种颜色区分 */
+        .lang-fr { color: var(--fr-color); font-style: italic; }
+        .lang-zh { color: var(--zh-color); font-weight: 500; }
+
+        /* 激活的高亮状态：整行变红 */
+        .line-wrapper.active {
+            background: rgba(204, 0, 0, 0.05); /* 极淡的背景 */
+            border-left: 4px solid var(--yt-red); /* 左侧红色指示线 */
+        }
+        .line-wrapper.active .text-content {
             color: var(--yt-red) !important;
-            transform: scale(1.1);
             font-weight: bold;
         }
 
+        /* 录制状态隐藏UI */
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
+        
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 3000; }
     </style>
 </head>
 <body>
 
 <div id="ui-controls">
     <div style="display:flex; gap:10px">
-        <button onclick="setMode('youtube')">YouTube 16:9</button>
-        <button onclick="setMode('mobile')">手机竖屏 9:16</button>
-        <button id="startBtn">开始制作视频</button>
+        <button onclick="setMode('youtube')">16:9 (YouTube)</button>
+        <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
+        <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Bonjour mes amis.
-朋友们好。
-Aujourd'hui, nous créons un outil d'apprentissage automatique.
-今天我们制作一个自动学习工具。
-Les mots s'allument un par un comme dans un karaoké.
-单词会像卡拉OK一样逐个亮起。
-C'est parfait pour la mémorisation.
-这对记忆非常有帮助。</textarea>
+    <textarea id="multiInput">Bonjour, c'est une leçon de français.
+你好，这是一堂法语课。
+Nous utilisons un format de papier pour une meilleure lecture.
+我们使用纸张格式以便更好地阅读。
+Même si la phrase est très longue, elle va se mettre à la ligne automatiquement sans être coupée.
+即使句子非常长，它也会自动换行而不会被切断。
+Bonne étude !
+学习愉快！</textarea>
 </div>
 
 <div id="stage-viewport">
@@ -99,7 +106,7 @@ C'est parfait pour la mémorisation.
     </div>
 </div>
 
-<a id="download-link" style="display:none; position:fixed; top:20px; right:20px; background:#27ae60; color:white; padding:10px; border-radius:5px; text-decoration:none;">⬇ 下载视频</a>
+<a id="download-link" href="#">⬇ 下载视频</a>
 
 <script>
     const stage = document.getElementById('recording-stage');
@@ -109,97 +116,77 @@ C'est parfait pour la mémorisation.
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
     }
 
-    // 将文本拆分为单词或汉字
-    function segmentText(text) {
-        if (/[\u4e00-\u9fa5]/.test(text)) {
-            return text.split(''); // 中文按字拆
-        } else {
-            return text.split(/(\s+)/); // 西文按单词和空格拆
-        }
+    function isChinese(text) {
+        return /[\u4e00-\u9fa5]/.test(text);
     }
 
     function speak(text) {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'fr-FR';
-            utterance.rate = 0.75; // 稍微放慢一点点，方便对准高亮
+            utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
+            utterance.rate = 0.85;
             utterance.onend = resolve;
             window.speechSynthesis.speak(utterance);
         });
     }
 
     async function startProcess() {
-        const rawLines = document.getElementById('multiInput').value.split('\n').filter(l => l.trim());
-        contentList.innerHTML = '';
-        
-        // 预渲染所有行和词
-        const lineData = rawLines.map(line => {
-            const block = document.createElement('div');
-            block.className = 'line-block';
-            const isZh = /[\u4e00-\u9fa5]/.test(line);
-            block.classList.add(isZh ? 'zh-text' : 'fr-text');
-            
-            const words = segmentText(line);
-            const wordSpans = words.map(w => {
-                const span = document.createElement('span');
-                span.className = 'word-unit';
-                span.innerText = w;
-                block.appendChild(span);
-                return span;
-            });
-            
-            contentList.appendChild(block);
-            return { block, wordSpans, text: line };
-        });
+        const lines = document.getElementById('multiInput').value.split('\n').filter(l => l.trim());
+        if(!lines.length) return;
 
         try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { displaySurface: "browser" },
+                audio: true
+            });
+
             document.body.classList.add('is-recording');
-            
             const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
             const chunks = [];
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
-                const dl = document.getElementById('download-link');
-                dl.href = URL.createObjectURL(blob);
-                dl.style.display = 'block';
+                document.getElementById('download-link').href = URL.createObjectURL(blob);
+                document.getElementById('download-link').style.display = 'block';
                 document.body.classList.remove('is-recording');
             };
+
+            // 预生成所有行
+            contentList.innerHTML = '';
+            const elements = lines.map(text => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'line-wrapper';
+                const langClass = isChinese(text) ? 'lang-zh' : 'lang-fr';
+                wrapper.innerHTML = `<div class="text-content ${langClass}">${text}</div>`;
+                contentList.appendChild(wrapper);
+                return wrapper;
+            });
 
             recorder.start();
             await new Promise(r => setTimeout(r, 1000));
 
-            for (let i = 0; i < lineData.length; i++) {
-                const item = lineData[i];
+            // 执行阅读和高亮循环
+            for (let i = 0; i < elements.length; i++) {
+                const el = elements[i];
                 
-                // 1. 自动滚动到可视区域中心
-                item.block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 1. 高亮当前行
+                el.classList.add('active');
                 
-                // 2. 启动朗读（异步）
-                const speechPromise = speak(item.text);
+                // 2. 智能滚动：将当前行滚动到屏幕中央，留出上下空间
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 
-                // 3. 模拟逐字高亮逻辑（按时间平分）
-                // 这是一个估算值，因为TTS API不提供精确的逐词事件
-                const duration = item.text.length * 250; // 估算每字250ms
-                const interval = duration / item.wordSpans.length;
+                // 3. 朗读
+                await speak(lines[i]);
                 
-                for(let j=0; j<item.wordSpans.length; j++) {
-                    item.wordSpans[j].classList.add('active');
-                    await new Promise(r => setTimeout(r, interval * 0.8)); 
-                    // 读完后保持一点红色，直到整行读完
-                }
-                
-                await speechPromise; // 确保语音真的读完了
-                await new Promise(r => setTimeout(r, 400));
-                
-                // 整行读完后，清除该行高亮
-                item.wordSpans.forEach(s => s.classList.remove('active'));
+                // 4. 停顿，然后取消高亮，进入下一行
+                await new Promise(r => setTimeout(r, 500));
+                el.classList.remove('active');
             }
 
             await new Promise(r => setTimeout(r, 1000));
             recorder.stop();
             stream.getTracks().forEach(t => t.stop());
+
         } catch (e) {
             document.body.classList.remove('is-recording');
         }
