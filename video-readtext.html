@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-最终修正版</title>
+    <title>中法双语教学-艺术动态片头版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -11,7 +11,6 @@
             --soft-green: #e9f5db;
             --soft-pink: #fce4ec;
             --border-color: #adc178; 
-            --accent-pink: #f06292;
             --zh-color: #333;
             --fr-color: #2c5d63;
             --line-height: 38px;
@@ -23,91 +22,101 @@
             display: flex; flex-direction: column; align-items: center;
         }
         
-        /* UI区 - 保持在顶部 */
         #ui-controls { 
             background: #333; padding: 15px; width: 100%; 
             display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 3000; 
         }
-        .controls-row { display: flex; gap: 10px; }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; font-size: 14px; }
+        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
-        /* 视口容器 - 确保比例正确 */
-        #stage-viewport { 
-            margin: 20px auto; 
-            display: flex; justify-content: center; align-items: center; 
-            background: #000; position: relative;
-        }
+        #stage-viewport { margin: 20px auto; display: flex; justify-content: center; align-items: center; background: #000; }
 
-        /* 舞台主体 */
         #recording-stage {
             background-color: var(--paper-bg);
-            position: relative;
-            box-sizing: border-box;
-            overflow: hidden; /* 关键：裁剪掉溢出的滚动内容 */
-            z-index: 1;
-            transition: width 0.3s, height 0.3s;
+            position: relative; box-sizing: border-box; overflow: hidden; z-index: 1;
         }
 
-        /* 比例尺寸定义 */
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* --- 艺术边框层 (固定在文字之上) --- */
+        /* --- 固定艺术边框 --- */
         #frame-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* 允许点击下方内容 */
-            z-index: 50; 
-            /* 制作淡绿色和淡粉色的渐变边框 */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50; 
             border: 18px solid transparent;
             border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* 角落花纹装饰 */
         .corner-mark {
-            position: absolute; width: 50px; height: 50px;
-            border: 4px solid var(--border-color); z-index: 60;
+            position: absolute; width: 45px; height: 45px;
+            border: 3px solid var(--border-color); z-index: 60;
         }
-        .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 15px 0 0 0; }
-        .br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 15px 0; }
+        .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+        .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
 
-        /* 内部滚动容器 */
-        #scroll-content {
-            width: 100%; height: 100%;
-            padding: 80px 50px; /* 留出边框位置 */
-            box-sizing: border-box;
-            overflow-y: hidden; /* 脚本控制滚动 */
-            z-index: 10;
-        }
-
-        #content-list {
-            background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
-            background-size: 100% var(--line-height);
-            line-height: var(--line-height);
-        }
-
-        /* 片头动画 */
+        /* --- 艺术片头 (全新设计) --- */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #2d5a27, #1e3c72);
+            /* 动态流光背景 */
+            background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
+            background-size: 400% 400%;
+            animation: gradientBG 6s ease infinite;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 100; transition: transform 0.8s ease-in-out;
+            z-index: 100; transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
         }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         #intro-screen.hidden { transform: translateY(-100%); }
-        .title-fr { font-family: 'Cinzel', serif; font-size: 32px; color: #fff; margin-bottom: 5px; animation: fadeInUp 1s forwards; }
-        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 38px; color: #e9f5db; animation: fadeInUp 1s forwards 0.4s; opacity: 0; }
 
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .intro-box { text-align: center; position: relative; padding: 20px; }
+        
+        /* 装饰线条 */
+        .intro-box::before, .intro-box::after {
+            content: ''; position: absolute; width: 60px; height: 60px;
+            border: 2px solid rgba(255,255,255,0.3); animation: lineGrow 2s ease-out forwards;
+        }
+        .intro-box::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+        .intro-box::after { bottom: 0; right: 0; border-left: none; border-top: none; }
 
-        /* 句子高亮 */
+        @keyframes lineGrow {
+            from { width: 0; height: 0; opacity: 0; }
+            to { width: 100%; height: 100%; opacity: 1; }
+        }
+
+        .title-fr { 
+            font-family: 'Cinzel', serif; font-size: 34px; color: #fff; 
+            letter-spacing: 4px; margin-bottom: 10px; display: block;
+            opacity: 0; animation: titleFadeIn 1.2s forwards 0.5s;
+        }
+        .title-zh { 
+            font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d;
+            display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 1s;
+        }
+
+        @keyframes titleFadeIn {
+            from { opacity: 0; transform: translateY(15px); filter: blur(5px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+
+        /* 文字内容 */
+        #scroll-content {
+            width: 100%; height: 100%; padding: 85px 55px;
+            box-sizing: border-box; overflow-y: hidden; z-index: 10;
+        }
+        #content-list {
+            background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
+            background-size: 100% var(--line-height); line-height: var(--line-height);
+        }
         .sentence-unit { display: inline; font-size: 22px; padding: 0 4px; transition: 0.3s; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
         .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
 
-        /* 录制模式 */
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
@@ -116,17 +125,17 @@
 <body>
 
 <div id="ui-controls">
-    <div class="controls-row">
+    <div style="display:flex; gap:10px">
         <button onclick="setMode('youtube')">16:9 (YouTube)</button>
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Bienvenue à tous pour apprendre le français.
-欢迎大家来学习法语。
-Aujourd'hui, nous avons un cadre magnifique.
-今天我们有一个精美的边框。
-Bonne étude et amusez-vous bien !
-祝大家学习愉快，玩得开心！</textarea>
+    <textarea id="multiInput">Apprendre le français, c'est magnifique.
+学习法语，这是一件美妙的事。
+Ici, nous mélangeons l'art et la langue.
+在这里，我们将艺术与语言融合。
+Bonne chance pour votre voyage linguistique !
+祝您的语言之旅好运！</textarea>
 </div>
 
 <div id="stage-viewport">
@@ -136,8 +145,10 @@ Bonne étude et amusez-vous bien !
         <div class="corner-mark br"></div>
 
         <div id="intro-screen">
-            <span class="title-fr">Étude du Français</span>
-            <span class="title-zh">中文法语学习（中法双语）</span>
+            <div class="intro-box">
+                <span class="title-fr">ÉTUDE DU FRANÇAIS</span>
+                <span class="title-zh">中文法语学习（中法双语）</span>
+            </div>
         </div>
 
         <div id="scroll-content">
@@ -206,20 +217,17 @@ Bonne étude et amusez-vous bien !
             };
 
             recorder.start();
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 3500)); // 片头稍长一点，展示动画
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
-                
-                // 滚动：使当前句子出现在视口中心
                 const offsetTop = data.element.offsetTop;
                 scrollContent.scrollTo({
                     top: offsetTop - scrollContent.offsetHeight / 2,
                     behavior: 'smooth'
                 });
-
                 await speak(data.text);
                 await new Promise(r => setTimeout(r, 500));
                 data.element.classList.remove('active');
