@@ -2,7 +2,8 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>双语教学视频-稳定高亮版</title>
+    <title>双语教学视频-视觉片头版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
             --yt-red: #cc0000; 
@@ -10,7 +11,8 @@
             --line-color: #e0e0e0;
             --zh-color: #333333;
             --fr-color: #1a5276;
-            --line-height: 36px; /* 统一行高 */
+            --line-height: 36px;
+            --intro-bg: radial-gradient(circle, #2c3e50 0%, #000000 100%);
         }
         
         body { 
@@ -24,7 +26,7 @@
             background: #222; padding: 15px; width: 100%; 
             display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000;
         }
-        textarea { width: 90%; max-width: 800px; height: 80px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
+        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         /* 视频舞台 */
@@ -32,53 +34,81 @@
         
         #recording-stage {
             background-color: var(--paper-bg);
-            /* 背景横线对齐 */
             background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
             background-size: 100% var(--line-height); 
-            padding: 100px 40px; /* 上下预留大量安全空间，防止贴边 */
+            padding: 80px 40px; 
             box-sizing: border-box; 
             position: relative; 
-            overflow-y: hidden; /* 录制时由JS平滑控制 */
+            overflow: hidden;
             line-height: var(--line-height);
         }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 内容块样式 */
+        /* 片头动画样式 */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--intro-bg);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #intro-screen.hidden {
+            transform: translateY(-100%); /* 向上滑动退出 */
+        }
+
+        /* 艺术文字 */
+        .intro-text-box { text-align: center; z-index: 2; }
+        .intro-title-fr {
+            font-family: 'Cinzel', serif;
+            font-size: 42px; color: #fff;
+            margin-bottom: 5px; opacity: 0;
+            animation: slideUpFade 1s ease forwards 0.3s;
+        }
+        .intro-title-zh {
+            font-family: 'ZCOOL KuaiLe', cursive;
+            font-size: 38px; color: #e67e22;
+            opacity: 0;
+            animation: slideUpFade 1s ease forwards 0.8s;
+        }
+
+        /* 动态装饰 */
+        .decor {
+            position: absolute; border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%; animation: ripple 3s infinite;
+        }
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 0.5; }
+            100% { width: 500px; height: 500px; opacity: 0; }
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 教学内容样式 */
         .line-wrapper {
-            margin-bottom: 12px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            transition: all 0.4s ease;
-            word-break: break-all;
-            white-space: normal;
-            border-left: 4px solid transparent;
+            margin-bottom: 12px; padding: 4px 10px; border-radius: 4px;
+            transition: all 0.4s ease; word-break: break-all; border-left: 4px solid transparent;
         }
-
-        .text-content {
-            font-size: 20px; /* 适中的字号 */
-            transition: color 0.4s ease;
-        }
-
-        /* 语种颜色区分 */
+        .text-content { font-size: 20px; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
 
-        /* 激活的高亮状态：整行变红 */
         .line-wrapper.active {
-            background: rgba(204, 0, 0, 0.05); /* 极淡的背景 */
-            border-left: 4px solid var(--yt-red); /* 左侧红色指示线 */
+            background: rgba(204, 0, 0, 0.05);
+            border-left: 4px solid var(--yt-red);
         }
         .line-wrapper.active .text-content {
-            color: var(--yt-red) !important;
-            font-weight: bold;
+            color: var(--yt-red) !important; font-weight: bold;
         }
 
-        /* 录制状态隐藏UI */
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
-        
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 3000; }
     </style>
 </head>
@@ -90,18 +120,25 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Bonjour, c'est une leçon de français.
-你好，这是一堂法语课。
-Nous utilisons un format de papier pour une meilleure lecture.
-我们使用纸张格式以便更好地阅读。
-Même si la phrase est très longue, elle va se mettre à la ligne automatiquement sans être coupée.
-即使句子非常长，它也会自动换行而不会被切断。
-Bonne étude !
-学习愉快！</textarea>
+    <textarea id="multiInput">Bonjour tout le monde !
+大家好！
+Bienvenue dans cette leçon.
+欢迎来到这节课。
+Aujourd'hui, nous avons un beau générique.
+今天我们有一个漂亮的开头。
+C'est simple et élégant.
+它既简单又优雅。</textarea>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
+        <div id="intro-screen">
+            <div class="decor"></div>
+            <div class="intro-text-box">
+                <div class="intro-title-fr">Le Français</div>
+                <div class="intro-title-zh">中法双语课堂</div>
+            </div>
+        </div>
         <div id="content-list"></div>
     </div>
 </div>
@@ -111,6 +148,7 @@ Bonne étude !
 <script>
     const stage = document.getElementById('recording-stage');
     const contentList = document.getElementById('content-list');
+    const introScreen = document.getElementById('intro-screen');
 
     function setMode(mode) {
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
@@ -149,10 +187,21 @@ Bonne étude !
                 document.getElementById('download-link').href = URL.createObjectURL(blob);
                 document.getElementById('download-link').style.display = 'block';
                 document.body.classList.remove('is-recording');
+                introScreen.classList.remove('hidden');
             };
 
-            // 预生成所有行
+            // 1. 初始化并开始录制
+            introScreen.classList.remove('hidden');
             contentList.innerHTML = '';
+            recorder.start();
+
+            // 2. 纯视觉片头展示 3 秒
+            await new Promise(r => setTimeout(r, 3000));
+
+            // 3. 片头向上滑动隐藏
+            introScreen.classList.add('hidden');
+            
+            // 4. 加载教学内容
             const elements = lines.map(text => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'line-wrapper';
@@ -161,24 +210,15 @@ Bonne étude !
                 contentList.appendChild(wrapper);
                 return wrapper;
             });
+            
+            await new Promise(r => setTimeout(r, 800)); // 等待片头滑走动画完成
 
-            recorder.start();
-            await new Promise(r => setTimeout(r, 1000));
-
-            // 执行阅读和高亮循环
+            // 5. 阅读循环
             for (let i = 0; i < elements.length; i++) {
                 const el = elements[i];
-                
-                // 1. 高亮当前行
                 el.classList.add('active');
-                
-                // 2. 智能滚动：将当前行滚动到屏幕中央，留出上下空间
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // 3. 朗读
                 await speak(lines[i]);
-                
-                // 4. 停顿，然后取消高亮，进入下一行
                 await new Promise(r => setTimeout(r, 500));
                 el.classList.remove('active');
             }
@@ -189,6 +229,7 @@ Bonne étude !
 
         } catch (e) {
             document.body.classList.remove('is-recording');
+            introScreen.classList.remove('hidden');
         }
     }
 
