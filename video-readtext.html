@@ -2,17 +2,20 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>双语教学视频-艺术背景修正版</title>
+    <title>双语教学视频-图案背景版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
             --yt-red: #cc0000; 
             --paper-bg: #fdfaf3; 
-            --line-color: rgba(0,0,0,0.08); /* 使用半透明横线 */
+            --line-color: rgba(0,0,0,0.08); /* 半透明横线 */
             --zh-color: #333333;
             --fr-color: #1a5276;
             --line-height: 38px;
             --intro-bg: radial-gradient(circle, #2c3e50 0%, #000000 100%);
+            /* 新增图案背景颜色 */
+            --pattern-color-dark: rgba(150, 150, 150, 0.1); /* 深灰色图案 */
+            --pattern-color-light: rgba(200, 200, 200, 0.08); /* 浅灰色图案 */
         }
         
         body { 
@@ -31,7 +34,6 @@
         /* 核心舞台 */
         #recording-stage {
             background-color: var(--paper-bg);
-            /* 将横线设为顶层背景，但保持透明 */
             background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
             background-size: 100% var(--line-height); 
             padding: 100px 45px; 
@@ -39,33 +41,42 @@
             position: relative; 
             overflow: hidden;
             line-height: var(--line-height);
-            z-index: 1;
+            z-index: 1; /* 确保内容在最上 */
         }
 
-        /* --- 艺术背景层：位于横线和文字下方 --- */
-        #art-layer {
+        /* --- 艺术图案背景层：使用伪元素创建图案 --- */
+        #recording-stage::before,
+        #recording-stage::after {
+            content: '';
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; /* 关键：确保在内容和横线之下 */
-            overflow: hidden;
-            opacity: 0.6;
+            background-repeat: no-repeat;
+            z-index: -1; /* 确保在信纸内容和横线之下 */
+            opacity: 0.7; /* 整体调低透明度 */
         }
 
-        .blob {
-            position: absolute;
-            filter: blur(40px);
-            border-radius: 50%;
-            opacity: 0.5;
-            animation: move 15s infinite alternate ease-in-out;
+        /* 左上角图案 */
+        #recording-stage::before {
+            width: 150px; height: 150px;
+            top: -20px; left: -20px;
+            background-image: 
+                radial-gradient(circle at 15px 15px, var(--pattern-color-dark) 2px, transparent 3px), /* 小圆点 */
+                linear-gradient(45deg, var(--pattern-color-light) 5px, transparent 5px), /* 斜线 */
+                linear-gradient(-45deg, var(--pattern-color-light) 5px, transparent 5px);
+            background-size: 30px 30px, 100% 100%, 100% 100%;
+            background-position: 0 0, 0 0, 0 0;
+            transform: rotate(-10deg);
         }
-        /* 设计几个不同颜色的水彩感色块 */
-        .blob-1 { width: 300px; height: 300px; background: #ffdfba; top: -50px; left: -50px; }
-        .blob-2 { width: 400px; height: 400px; background: #bae1ff; bottom: -100px; right: -50px; animation-delay: -2s; }
-        .blob-3 { width: 250px; height: 250px; background: #f2ccff; top: 40%; left: 60%; animation-delay: -5s; }
 
-        @keyframes move {
-            from { transform: translate(0, 0) scale(1); }
-            to { transform: translate(40px, 50px) scale(1.2); }
+        /* 右下角图案 */
+        #recording-stage::after {
+            width: 200px; height: 200px;
+            bottom: -30px; right: -30px;
+            background-image: 
+                linear-gradient(90deg, var(--pattern-color-dark) 1px, transparent 1px), /* 竖线 */
+                linear-gradient(var(--pattern-color-dark) 1px, transparent 1px); /* 横线 */
+            background-size: 20px 20px, 20px 20px;
+            background-position: 0 0, 0 0;
+            transform: rotate(5deg);
         }
 
         /* 片头样式 */
@@ -82,7 +93,7 @@
         /* 内容样式 */
         .sentence-unit {
             display: inline; font-size: 21px; transition: all 0.3s ease;
-            padding: 2px 0; word-wrap: break-word; position: relative; z-index: 2;
+            padding: 2px 0; word-wrap: break-word; position: relative; z-index: 2; /* 确保文字在横线上 */
         }
         .lang-fr { color: var(--fr-color); font-style: italic; hyphens: auto; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
@@ -114,12 +125,6 @@ Bonne chance pour votre apprentissage.
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
-        <div id="art-layer">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-            <div class="blob blob-3"></div>
-        </div>
-
         <div id="intro-screen">
             <div class="intro-title-fr">Le Français Art</div>
             <div class="intro-title-zh">艺术双语课堂</div>
