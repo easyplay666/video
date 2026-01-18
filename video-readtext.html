@@ -2,103 +2,112 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>艺术信纸双语视频工具</title>
+    <title>中法双语教学-艺术边框版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
             --yt-red: #cc0000; 
             --paper-bg: #fdfaf3; 
-            --border-color: #1a5276; /* 深蓝色艺术边框 */
-            --accent-gold: #d4af37;  /* 金色装饰 */
+            --soft-green: #e9f5db; /* 淡淡的绿 */
+            --soft-pink: #fce4ec;  /* 淡淡的粉 */
+            --border-main: #adc178; /* 装饰主绿 */
+            --accent-pink: #f06292; /* 强调粉 */
             --zh-color: #333;
-            --fr-color: #1a5276;
+            --fr-color: #2c5d63;
             --line-height: 38px;
         }
         
         body { 
             font-family: "Georgia", "PingFang SC", serif; 
-            background: #111; color: white; margin: 0; 
+            background: #1a1a1a; color: white; margin: 0; 
             display: flex; flex-direction: column; align-items: center;
         }
         
-        /* UI区 */
-        #ui-controls { background: #222; padding: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000; }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; }
+        /* UI控制区 */
+        #ui-controls { background: #333; padding: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000; }
+        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; font-size: 14px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         #stage-viewport { margin: 10px auto; display: flex; justify-content: center; align-items: center; background: #000; }
 
-        /* 艺术信纸舞台 */
+        /* 艺术舞台 */
         #recording-stage {
             background-color: var(--paper-bg);
-            /* 纸张底色 */
             position: relative;
             box-sizing: border-box;
-            padding: 80px 60px;
+            padding: 90px 70px;
             overflow: hidden;
             z-index: 1;
         }
 
-        /* 绘制四个边框和角落装饰 */
+        /* 艺术边框设计：淡绿淡粉渐变 */
         #recording-stage::before {
             content: "";
             position: absolute;
-            top: 20px; left: 20px; right: 20px; bottom: 20px;
-            border: 2px solid var(--border-color);
+            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            border: 3px double var(--border-main);
+            background: linear-gradient(135deg, var(--soft-green) 0%, transparent 20%, transparent 80%, var(--soft-pink) 100%);
             pointer-events: none;
             z-index: 2;
         }
 
-        /* 外部装饰框 */
-        #recording-stage::after {
-            content: "";
-            position: absolute;
-            top: 10px; left: 10px; right: 10px; bottom: 10px;
-            border: 1px solid var(--accent-gold);
-            pointer-events: none;
-            z-index: 2;
+        /* 装饰性花纹角落 */
+        .corner-deco {
+            position: absolute; width: 80px; height: 80px;
+            z-index: 3; pointer-events: none;
         }
-
-        /* 角落花纹 */
-        .corner {
-            position: absolute; width: 60px; height: 60px;
-            border: 4px solid var(--border-color);
-            z-index: 3;
+        /* 使用几何图形模拟植物花纹 */
+        .top-left { 
+            top: 10px; left: 10px; 
+            border-left: 5px solid var(--border-main); border-top: 5px solid var(--accent-pink);
+            border-radius: 40px 0 0 0;
         }
-        .top-left { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 15px 0 0 0; }
-        .top-right { top: 10px; right: 10px; border-left: none; border-bottom: none; border-radius: 0 15px 0 0; }
-        .bottom-left { bottom: 10px; left: 10px; border-right: none; border-top: none; border-radius: 0 0 0 15px; }
-        .bottom-right { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 15px 0; }
+        .bottom-right { 
+            bottom: 10px; right: 10px; 
+            border-right: 5px solid var(--border-main); border-bottom: 5px solid var(--accent-pink);
+            border-radius: 0 0 40px 0;
+        }
 
         /* 内容容器 */
         #content-list {
             position: relative;
             z-index: 5;
-            /* 信纸横线 */
-            background-image: linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px);
+            background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
             background-size: 100% var(--line-height);
             line-height: var(--line-height);
-            min-height: 100%;
         }
 
         /* 句子样式 */
-        .sentence-unit { display: inline; font-size: 21px; padding: 2px 0; transition: all 0.3s; }
+        .sentence-unit { display: inline; font-size: 22px; padding: 0 4px; transition: all 0.3s; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
-        .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(212, 175, 55, 0.15); }
+        /* 变色效果：变为粉红并带光晕 */
+        .sentence-unit.active { 
+            color: var(--yt-red) !important; 
+            font-weight: bold; 
+            background: rgba(240, 98, 146, 0.15);
+            text-shadow: 0 0 2px rgba(240, 98, 146, 0.3);
+        }
 
-        /* 片头样式 */
+        /* 片头动画：固定标题 */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #2c3e50 0%, #000 100%);
+            background: linear-gradient(45deg, #2d5a27 0%, #1a1a1a 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 100; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #intro-screen.hidden { transform: translateY(-100%); }
-        .intro-title-fr { font-family: 'Cinzel', serif; font-size: 42px; color: #fff; opacity: 0; animation: slideUp 1s forwards 0.3s; }
-        .intro-title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 38px; color: var(--accent-gold); opacity: 0; animation: slideUp 1s forwards 0.8s; }
+        .intro-title { 
+            text-align: center;
+            animation: popIn 1s forwards;
+        }
+        .intro-main { font-family: 'ZCOOL KuaiLe', cursive; font-size: 45px; color: white; display: block; }
+        .intro-sub { font-family: 'Cinzel', serif; font-size: 24px; color: var(--border-main); display: block; margin-top: 10px; }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { 
+            from { opacity: 0; transform: scale(0.9); } 
+            to { opacity: 1; transform: scale(1); } 
+        }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
@@ -111,35 +120,35 @@
 
 <div id="ui-controls">
     <div style="display:flex; gap:10px">
-        <button onclick="setMode('youtube')">16:9 (YouTube)</button>
-        <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
-        <button id="startBtn">开始录制视频</button>
+        <button onclick="setMode('youtube')">YouTube (16:9)</button>
+        <button onclick="setMode('mobile')">手机竖屏 (9:16)</button>
+        <button id="startBtn">开始制作</button>
     </div>
-    <textarea id="multiInput">Bienvenue à notre cours. C'est un papier élégant.
-欢迎来到我们的课堂。这是一张优雅的纸。
-Le français est la langue de l'amour.
-法语是爱的语言。
-Bonne étude à tous !
-祝大家学习愉快！</textarea>
+    <textarea id="multiInput">Bonjour, enchanté de vous rencontrer.
+你好，很高兴见到你。
+Le printemps arrive avec des fleurs.
+春天带着花朵悄然而至。
+C'est une belle journée pour apprendre le français.
+这是学习法语的美好一天。</textarea>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
-        <div class="corner top-left"></div>
-        <div class="corner top-right"></div>
-        <div class="corner bottom-left"></div>
-        <div class="corner bottom-right"></div>
+        <div class="corner-deco top-left"></div>
+        <div class="corner-deco bottom-right"></div>
 
         <div id="intro-screen">
-            <div class="intro-title-fr">Le Français Élégant</div>
-            <div class="intro-title-zh">艺术教案</div>
+            <div class="intro-title">
+                <span class="intro-main">中文法语学习</span>
+                <span class="intro-sub">(中法双语)</span>
+            </div>
         </div>
 
         <div id="content-list"></div>
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载视频</a>
+<a id="download-link" href="#">⬇ 下载视频文件</a>
 
 <script>
     const stage = document.getElementById('recording-stage');
@@ -198,7 +207,7 @@ Bonne étude à tous !
             };
 
             recorder.start();
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 3000)); // 片头3秒
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
@@ -206,7 +215,7 @@ Bonne étude à tous !
                 data.element.classList.add('active');
                 data.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 await speak(data.text);
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 500));
                 data.element.classList.remove('active');
             }
 
