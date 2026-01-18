@@ -2,16 +2,16 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-艺术边框版</title>
+    <title>中法双语教学-固定艺术边框版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
             --yt-red: #cc0000; 
             --paper-bg: #fdfaf3; 
-            --soft-green: #e9f5db; /* 淡淡的绿 */
-            --soft-pink: #fce4ec;  /* 淡淡的粉 */
-            --border-main: #adc178; /* 装饰主绿 */
-            --accent-pink: #f06292; /* 强调粉 */
+            --soft-green: rgba(233, 245, 219, 0.5);
+            --soft-pink: rgba(252, 228, 236, 0.5);
+            --border-main: #adc178; 
+            --accent-pink: #f06292;
             --zh-color: #333;
             --fr-color: #2c5d63;
             --line-height: 38px;
@@ -21,57 +21,55 @@
             font-family: "Georgia", "PingFang SC", serif; 
             background: #1a1a1a; color: white; margin: 0; 
             display: flex; flex-direction: column; align-items: center;
+            overflow: hidden;
         }
         
         /* UI控制区 */
-        #ui-controls { background: #333; padding: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2000; }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; font-size: 14px; }
+        #ui-controls { background: #333; padding: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 3000; }
+        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
-        #stage-viewport { margin: 10px auto; display: flex; justify-content: center; align-items: center; background: #000; }
+        #stage-viewport { margin: 10px auto; display: flex; justify-content: center; align-items: center; background: #000; position: relative; }
 
-        /* 艺术舞台 */
+        /* 录制舞台主体 */
         #recording-stage {
             background-color: var(--paper-bg);
             position: relative;
             box-sizing: border-box;
-            padding: 90px 70px;
-            overflow: hidden;
+            width: 100%; height: 100%;
+            overflow: hidden; /* 由内部控制滚动 */
             z-index: 1;
         }
 
-        /* 艺术边框设计：淡绿淡粉渐变 */
-        #recording-stage::before {
-            content: "";
+        /* --- 核心修改：固定边框浮层 --- */
+        #fixed-frame {
             position: absolute;
-            top: 15px; left: 15px; right: 15px; bottom: 15px;
-            border: 3px double var(--border-main);
-            background: linear-gradient(135deg, var(--soft-green) 0%, transparent 20%, transparent 80%, var(--soft-pink) 100%);
-            pointer-events: none;
-            z-index: 2;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* 不影响点击 */
+            z-index: 20; /* 始终在文字之上 */
+            border: 25px solid transparent;
+            /* 绘制艺术边框 */
+            border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
         }
 
-        /* 装饰性花纹角落 */
-        .corner-deco {
-            position: absolute; width: 80px; height: 80px;
-            z-index: 3; pointer-events: none;
+        /* 角落花纹：固定不动 */
+        .art-corner {
+            position: absolute; width: 60px; height: 60px; z-index: 25;
+            border: 4px solid var(--border-main);
         }
-        /* 使用几何图形模拟植物花纹 */
-        .top-left { 
-            top: 10px; left: 10px; 
-            border-left: 5px solid var(--border-main); border-top: 5px solid var(--accent-pink);
-            border-radius: 40px 0 0 0;
-        }
-        .bottom-right { 
-            bottom: 10px; right: 10px; 
-            border-right: 5px solid var(--border-main); border-bottom: 5px solid var(--accent-pink);
-            border-radius: 0 0 40px 0;
+        .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 20px 0 0 0; }
+        .br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 20px 0; }
+
+        /* 内容滚动区域 */
+        #scroll-container {
+            height: 100%; width: 100%;
+            padding: 100px 60px; /* 预留边框空间 */
+            box-sizing: border-box;
+            overflow-y: hidden; /* 脚本控制平滑滚动 */
         }
 
-        /* 内容容器 */
         #content-list {
-            position: relative;
-            z-index: 5;
             background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
             background-size: 100% var(--line-height);
             line-height: var(--line-height);
@@ -81,77 +79,78 @@
         .sentence-unit { display: inline; font-size: 22px; padding: 0 4px; transition: all 0.3s; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
-        /* 变色效果：变为粉红并带光晕 */
         .sentence-unit.active { 
             color: var(--yt-red) !important; 
             font-weight: bold; 
             background: rgba(240, 98, 146, 0.15);
-            text-shadow: 0 0 2px rgba(240, 98, 146, 0.3);
         }
 
-        /* 片头动画：固定标题 */
+        /* 片头动画：艺术双语标题 */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(45deg, #2d5a27 0%, #1a1a1a 100%);
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); /* 华丽渐变 */
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 100; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #intro-screen.hidden { transform: translateY(-100%); }
-        .intro-title { 
-            text-align: center;
-            animation: popIn 1s forwards;
-        }
-        .intro-main { font-family: 'ZCOOL KuaiLe', cursive; font-size: 45px; color: white; display: block; }
-        .intro-sub { font-family: 'Cinzel', serif; font-size: 24px; color: var(--border-main); display: block; margin-top: 10px; }
-
-        @keyframes popIn { 
-            from { opacity: 0; transform: scale(0.9); } 
-            to { opacity: 1; transform: scale(1); } 
+        
+        .intro-content { text-align: center; color: white; }
+        .title-fr { font-family: 'Cinzel', serif; font-size: 36px; display: block; margin-bottom: 5px; animation: slideIn 1s forwards; }
+        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; display: block; animation: slideIn 1s forwards 0.4s; opacity: 0; }
+        
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(30px); } 
+            to { opacity: 1; transform: translateY(0); } 
         }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
         body.is-recording #ui-controls { display: none; }
         body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
-        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 3000; }
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
     </style>
 </head>
 <body>
 
 <div id="ui-controls">
     <div style="display:flex; gap:10px">
-        <button onclick="setMode('youtube')">YouTube (16:9)</button>
-        <button onclick="setMode('mobile')">手机竖屏 (9:16)</button>
+        <button onclick="setMode('youtube')">16:9 (YouTube)</button>
+        <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         <button id="startBtn">开始制作</button>
     </div>
-    <textarea id="multiInput">Bonjour, enchanté de vous rencontrer.
-你好，很高兴见到你。
-Le printemps arrive avec des fleurs.
-春天带着花朵悄然而至。
-C'est une belle journée pour apprendre le français.
-这是学习法语的美好一天。</textarea>
+    <textarea id="multiInput">Apprendre le français ensemble.
+让我们一起学习法语。
+C'est une langue magnifique.
+这门语言非常优美。
+Bonne chance pour vos études !
+祝大家学习顺利！</textarea>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
-        <div class="corner-deco top-left"></div>
-        <div class="corner-deco bottom-right"></div>
+        
+        <div id="fixed-frame"></div>
+        <div class="art-corner tl"></div>
+        <div class="art-corner br"></div>
 
         <div id="intro-screen">
-            <div class="intro-title">
-                <span class="intro-main">中文法语学习</span>
-                <span class="intro-sub">(中法双语)</span>
+            <div class="intro-content">
+                <span class="title-fr">Étude du Français</span>
+                <span class="title-zh">中文法语学习（中法双语）</span>
             </div>
         </div>
 
-        <div id="content-list"></div>
+        <div id="scroll-container">
+            <div id="content-list"></div>
+        </div>
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载视频文件</a>
+<a id="download-link" href="#">⬇ 下载录制好的视频</a>
 
 <script>
     const stage = document.getElementById('recording-stage');
+    const scrollContainer = document.getElementById('scroll-container');
     const contentList = document.getElementById('content-list');
     const introScreen = document.getElementById('intro-screen');
 
@@ -207,13 +206,19 @@ C'est une belle journée pour apprendre le français.
             };
 
             recorder.start();
-            await new Promise(r => setTimeout(r, 3000)); // 片头3秒
+            await new Promise(r => setTimeout(r, 3000));
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
-                data.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 在滚动的容器内进行平滑对齐
+                const topPos = data.element.offsetTop;
+                scrollContainer.scrollTo({
+                    top: topPos - scrollContainer.offsetHeight / 2,
+                    behavior: 'smooth'
+                });
+
                 await speak(data.text);
                 await new Promise(r => setTimeout(r, 500));
                 data.element.classList.remove('active');
