@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-固定标题艺术版</title>
+    <title>中法双语教学-艺术紧凑版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -54,14 +54,15 @@
             border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
         }
 
-        /* --- 固定标题区域 --- */
+        /* --- 固定标题区域：优化间距 --- */
         #fixed-header {
             width: 100%;
-            padding: 85px 55px 15px 55px; /* 顶部留出空间 */
+            /* 调整为约两行的高度间距 (45px 左右) */
+            padding: 45px 55px 15px 55px; 
             box-sizing: border-box;
             z-index: 40;
             text-align: center;
-            border-bottom: 2px solid rgba(173, 193, 120, 0.3);
+            border-bottom: 1px solid rgba(173, 193, 120, 0.2);
             background-color: var(--paper-bg);
         }
         #stage-title {
@@ -70,9 +71,9 @@
             color: var(--zh-color);
             transition: 0.3s;
             display: inline-block;
-            padding: 4px 10px;
+            padding: 4px 12px;
         }
-        #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.15); border-radius: 4px; }
+        #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
 
         /* 片头动画 */
         #intro-screen {
@@ -93,7 +94,7 @@
         /* 文字滚动区 */
         #scroll-content {
             flex: 1;
-            width: 100%; padding: 15px 55px 85px 55px; /* 底部留出空间 */
+            width: 100%; padding: 15px 55px 60px 55px; 
             box-sizing: border-box; overflow-y: hidden; z-index: 10;
         }
         #content-list {
@@ -135,7 +136,7 @@
     </div>
 
     <div class="input-group">
-        <input type="text" id="titleInput" placeholder="请输入课程标题（例如：L'Amitié 友谊）" value="L'Amitié 友谊">
+        <input type="text" id="titleInput" placeholder="请输入课程标题" value="L'Amitié 友谊">
         <textarea id="multiInput" placeholder="请输入正文内容">C'est une magnifique journée.
 这是一个美好的日子。
 Nous parlons de l'amitié aujourd'hui.
@@ -248,7 +249,6 @@ Nous parlons de l'amitié aujourd'hui.
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
-            // 第一步：朗读标题
             if (titleText) {
                 stageTitle.classList.add('active');
                 await speak(titleText);
@@ -256,7 +256,6 @@ Nous parlons de l'amitié aujourd'hui.
                 stageTitle.classList.remove('active');
             }
 
-            // 第二步：循环正文
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 const offsetTop = data.element.offsetTop;
