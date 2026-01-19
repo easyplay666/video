@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-全能艺术版</title>
+    <title>中法双语教学-段间距自定义版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -45,7 +45,7 @@
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* --- 艺术边框系统：确保可见 --- */
+        /* 艺术边框层 */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
@@ -63,7 +63,7 @@
         /* 固定标题区 */
         #fixed-header {
             width: 100%;
-            padding: 40px 55px 15px 55px; /* 约两行高度 */
+            padding: 40px 55px 15px 55px; 
             box-sizing: border-box;
             z-index: 40;
             text-align: center;
@@ -99,10 +99,13 @@
         }
         #content-list {
             background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
-            /* 动态控制 background-size 和 line-height */
             background-size: 100% 40px; 
-            line-height: 1.8;
-            transition: all 0.2s ease;
+            line-height: 1.6; /* 固定的行内间距 */
+        }
+        
+        /* 独立行/段落的包裹容器 */
+        .paragraph-block {
+            transition: margin-bottom 0.2s ease;
         }
         
         .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
@@ -123,15 +126,15 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         
         <div class="setting-item">
-            <span>字体:</span>
+            <span>字体大小:</span>
             <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()">
             <span id="fontSizeVal">22px</span>
         </div>
 
         <div class="setting-item">
-            <span>行距:</span>
-            <input type="range" id="lineHeightInput" min="1.2" max="2.5" step="0.1" value="1.8" oninput="applyStyles()">
-            <span id="lineHeightVal">1.8</span>
+            <span>独立行间距:</span>
+            <input type="range" id="paraMarginInput" min="0" max="60" value="20" oninput="applyStyles()">
+            <span id="paraMarginVal">20px</span>
         </div>
 
         <div class="setting-item">
@@ -145,10 +148,10 @@
 
     <div class="input-group">
         <input type="text" id="titleInput" placeholder="请输入课程标题" value="L'Amitié 友谊">
-        <textarea id="multiInput" placeholder="请输入正文内容">C'est une magnifique journée.
-这是一个美好的日子。
-Nous parlons de l'amitié aujourd'hui.
-今天我们谈论友谊。</textarea>
+        <textarea id="multiInput" placeholder="请输入正文内容">Bonjour à tous.
+大家好。
+C'est une magnifique journée.
+这是一个美好的日子。</textarea>
     </div>
 </div>
 
@@ -188,32 +191,29 @@ Nous parlons de l'amitié aujourd'hui.
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
     }
 
-    // 综合应用字体和行高样式
     function applyStyles() {
         const fs = document.getElementById('fontSizeInput').value;
-        const lh = document.getElementById('lineHeightInput').value;
+        const pm = document.getElementById('paraMarginInput').value;
         
         document.getElementById('fontSizeVal').innerText = fs + 'px';
-        document.getElementById('lineHeightVal').innerText = lh;
+        document.getElementById('paraMarginVal').innerText = pm + 'px';
         
         contentList.style.fontSize = fs + 'px';
-        contentList.style.lineHeight = lh;
         
-        // 精准对齐背景横线：横线间距 = 字体大小 * 行高
-        const bgSize = fs * lh;
+        // 更新所有已生成的段落块间距
+        const blocks = document.querySelectorAll('.paragraph-block');
+        blocks.forEach(b => b.style.marginBottom = pm + 'px');
+
+        // 背景横线对齐逻辑（基于字体大小 * 固定行高1.6）
+        const bgSize = fs * 1.6;
         contentList.style.backgroundSize = `100% ${bgSize}px`;
     }
 
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
 
-    function cleanTextForSpeech(text) {
-        return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' ');
-    }
-
     function speak(text) {
         return new Promise((resolve) => {
-            const cleaned = cleanTextForSpeech(text);
-            const utterance = new SpeechSynthesisUtterance(cleaned);
+            const utterance = new SpeechSynthesisUtterance(text.replace(/[.,!?;:。，！？；：]/g, ' '));
             utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
             utterance.rate = 0.85;
             utterance.onend = resolve;
@@ -226,6 +226,7 @@ Nous parlons de l'amitié aujourd'hui.
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
         const readMode = document.querySelector('input[name="readMode"]:checked').value;
+        const currentMargin = document.getElementById('paraMarginInput').value + 'px';
         
         stageTitle.innerText = titleText;
         contentList.innerHTML = '';
@@ -233,7 +234,9 @@ Nous parlons de l'amitié aujourd'hui.
 
         paragraphs.forEach(pText => {
             const pWrapper = document.createElement('div');
-            pWrapper.style.marginBottom = '20px';
+            pWrapper.className = 'paragraph-block';
+            pWrapper.style.marginBottom = currentMargin;
+            
             const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
             sentences.forEach(sText => {
                 const span = document.createElement('span');
@@ -297,7 +300,6 @@ Nous parlons de l'amitié aujourd'hui.
         }
     }
 
-    // 初始化样式
     applyStyles();
     document.getElementById('startBtn').addEventListener('click', startProcess);
 </script>
