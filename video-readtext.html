@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-艺术动态片头版</title>
+    <title>中法双语教学-功能增强版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -13,7 +13,7 @@
             --border-color: #adc178; 
             --zh-color: #333;
             --fr-color: #2c5d63;
-            --line-height: 38px;
+            --line-height: 1.8; /* 使用倍数，适应不同字号 */
         }
         
         body { 
@@ -22,11 +22,16 @@
             display: flex; flex-direction: column; align-items: center;
         }
         
+        /* UI控制区增强 */
         #ui-controls { 
-            background: #333; padding: 15px; width: 100%; 
-            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 3000; 
+            background: #333; padding: 20px; width: 100%; 
+            display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 3000; 
         }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; }
+        .controls-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        
+        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #444; padding: 5px 12px; border-radius: 20px; }
+        
+        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; border: none; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         #stage-viewport { margin: 20px auto; display: flex; justify-content: center; align-items: center; background: #000; }
@@ -39,7 +44,7 @@
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* --- 固定艺术边框 --- */
+        /* 固定艺术边框 */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
@@ -54,65 +59,35 @@
         .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
         .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
 
-        /* --- 艺术片头 (全新设计) --- */
+        /* 艺术片头 */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* 动态流光背景 */
             background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
             background-size: 400% 400%;
             animation: gradientBG 6s ease infinite;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 100; transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
         }
-        
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         #intro-screen.hidden { transform: translateY(-100%); }
 
         .intro-box { text-align: center; position: relative; padding: 20px; }
-        
-        /* 装饰线条 */
-        .intro-box::before, .intro-box::after {
-            content: ''; position: absolute; width: 60px; height: 60px;
-            border: 2px solid rgba(255,255,255,0.3); animation: lineGrow 2s ease-out forwards;
-        }
-        .intro-box::before { top: 0; left: 0; border-right: none; border-bottom: none; }
-        .intro-box::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+        .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; margin-bottom: 10px; display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 0.5s; }
+        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 1s; }
+        @keyframes titleFadeIn { from { opacity: 0; transform: translateY(15px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 
-        @keyframes lineGrow {
-            from { width: 0; height: 0; opacity: 0; }
-            to { width: 100%; height: 100%; opacity: 1; }
-        }
-
-        .title-fr { 
-            font-family: 'Cinzel', serif; font-size: 34px; color: #fff; 
-            letter-spacing: 4px; margin-bottom: 10px; display: block;
-            opacity: 0; animation: titleFadeIn 1.2s forwards 0.5s;
-        }
-        .title-zh { 
-            font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d;
-            display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 1s;
-        }
-
-        @keyframes titleFadeIn {
-            from { opacity: 0; transform: translateY(15px); filter: blur(5px); }
-            to { opacity: 1; transform: translateY(0); filter: blur(0); }
-        }
-
-        /* 文字内容 */
+        /* 文字内容区 */
         #scroll-content {
             width: 100%; height: 100%; padding: 85px 55px;
             box-sizing: border-box; overflow-y: hidden; z-index: 10;
         }
         #content-list {
             background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
-            background-size: 100% var(--line-height); line-height: var(--line-height);
+            background-size: 100% calc(22px * 1.8); /* 初始大小，JS会动态修改 */
+            line-height: var(--line-height);
         }
-        .sentence-unit { display: inline; font-size: 22px; padding: 0 4px; transition: 0.3s; }
+        
+        .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
         .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
@@ -125,17 +100,31 @@
 <body>
 
 <div id="ui-controls">
-    <div style="display:flex; gap:10px">
+    <div class="controls-row">
         <button onclick="setMode('youtube')">16:9 (YouTube)</button>
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
+        
+        <div class="setting-item">
+            <span>字体大小:</span>
+            <input type="range" id="fontSizeInput" min="14" max="32" value="22" oninput="updateFontSize(this.value)">
+            <span id="fontSizeVal">22px</span>
+        </div>
+
+        <div class="setting-item">
+            <span>阅读模式:</span>
+            <label><input type="radio" name="readMode" value="all" checked> 全部</label>
+            <label><input type="radio" name="readMode" value="fr"> 仅法语</label>
+            <label><input type="radio" name="readMode" value="zh"> 仅中文</label>
+        </div>
+
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Apprendre le français, c'est magnifique.
-学习法语，这是一件美妙的事。
-Ici, nous mélangeons l'art et la langue.
-在这里，我们将艺术与语言融合。
-Bonne chance pour votre voyage linguistique !
-祝您的语言之旅好运！</textarea>
+    <textarea id="multiInput">Bonjour, comment allez-vous ?
+你好，你最近怎么样？
+Le français est une langue très élégante.
+法语是一门非常优雅的语言。
+C'est un plaisir de l'apprendre.
+学习它是一种乐趣。</textarea>
 </div>
 
 <div id="stage-viewport">
@@ -152,7 +141,7 @@ Bonne chance pour votre voyage linguistique !
         </div>
 
         <div id="scroll-content">
-            <div id="content-list"></div>
+            <div id="content-list" style="font-size: 22px;"></div>
         </div>
     </div>
 </div>
@@ -167,6 +156,14 @@ Bonne chance pour votre voyage linguistique !
 
     function setMode(mode) {
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
+    }
+
+    // 动态更新字体大小和背景横线间距
+    function updateFontSize(val) {
+        document.getElementById('fontSizeVal').innerText = val + 'px';
+        contentList.style.fontSize = val + 'px';
+        const lineHeight = val * 1.8;
+        contentList.style.backgroundSize = `100% ${lineHeight}px`;
     }
 
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
@@ -184,6 +181,8 @@ Bonne chance pour votre voyage linguistique !
     async function startProcess() {
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
+        const readMode = document.querySelector('input[name="readMode"]:checked').value;
+        
         contentList.innerHTML = '';
         const allSentenceData = [];
 
@@ -197,7 +196,14 @@ Bonne chance pour votre voyage linguistique !
                 span.className = `sentence-unit ${isZh ? 'lang-zh' : 'lang-fr'}`;
                 span.innerText = sText + " ";
                 pWrapper.appendChild(span);
-                allSentenceData.push({ element: span, text: sText });
+                
+                // 判断该句子是否需要朗读
+                let shouldRead = false;
+                if (readMode === 'all') shouldRead = true;
+                else if (readMode === 'fr' && !isZh) shouldRead = true;
+                else if (readMode === 'zh' && isZh) shouldRead = true;
+
+                allSentenceData.push({ element: span, text: sText, shouldRead: shouldRead });
             });
             contentList.appendChild(pWrapper);
         });
@@ -217,7 +223,7 @@ Bonne chance pour votre voyage linguistique !
             };
 
             recorder.start();
-            await new Promise(r => setTimeout(r, 3500)); // 片头稍长一点，展示动画
+            await new Promise(r => setTimeout(r, 3500));
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
@@ -228,8 +234,15 @@ Bonne chance pour votre voyage linguistique !
                     top: offsetTop - scrollContent.offsetHeight / 2,
                     behavior: 'smooth'
                 });
-                await speak(data.text);
-                await new Promise(r => setTimeout(r, 500));
+
+                if (data.shouldRead) {
+                    await speak(data.text);
+                } else {
+                    // 如果不朗读，也要停顿一下，让视觉上有个展示时间
+                    await new Promise(r => setTimeout(r, 600)); 
+                }
+                
+                await new Promise(r => setTimeout(r, 400));
                 data.element.classList.remove('active');
             }
 
