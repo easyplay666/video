@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-段间距自定义版</title>
+    <title>中法双语教学-全能修复版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -21,6 +21,7 @@
             display: flex; flex-direction: column; align-items: center;
         }
         
+        /* UI区 */
         #ui-controls { 
             background: #333; padding: 20px; width: 100%; 
             display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; 
@@ -45,7 +46,7 @@
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 艺术边框层 */
+        /* 艺术边框 */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
@@ -91,7 +92,7 @@
         .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; display: block; }
         .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; margin-top: 5px; }
 
-        /* 文字滚动区 */
+        /* 文字区域 */
         #scroll-content {
             flex: 1;
             width: 100%; padding: 10px 55px 60px 55px; 
@@ -100,14 +101,9 @@
         #content-list {
             background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
             background-size: 100% 40px; 
-            line-height: 1.6; /* 固定的行内间距 */
+            line-height: 1.6;
         }
-        
-        /* 独立行/段落的包裹容器 */
-        .paragraph-block {
-            transition: margin-bottom 0.2s ease;
-        }
-        
+        .paragraph-block { transition: margin-bottom 0.2s ease; }
         .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
@@ -126,13 +122,13 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         
         <div class="setting-item">
-            <span>字体大小:</span>
+            <span>字体:</span>
             <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()">
             <span id="fontSizeVal">22px</span>
         </div>
 
         <div class="setting-item">
-            <span>独立行间距:</span>
+            <span>行间距:</span>
             <input type="range" id="paraMarginInput" min="0" max="60" value="20" oninput="applyStyles()">
             <span id="paraMarginVal">20px</span>
         </div>
@@ -148,10 +144,10 @@
 
     <div class="input-group">
         <input type="text" id="titleInput" placeholder="请输入课程标题" value="L'Amitié 友谊">
-        <textarea id="multiInput" placeholder="请输入正文内容">Bonjour à tous.
-大家好。
-C'est une magnifique journée.
-这是一个美好的日子。</textarea>
+        <textarea id="multiInput">Il a dit : "Bonjour !"
+他说过：“《你好》！”
+C'est magnifique —— n'est-ce pas ?
+这很美——不是吗？</textarea>
     </div>
 </div>
 
@@ -194,26 +190,26 @@ C'est une magnifique journée.
     function applyStyles() {
         const fs = document.getElementById('fontSizeInput').value;
         const pm = document.getElementById('paraMarginInput').value;
-        
         document.getElementById('fontSizeVal').innerText = fs + 'px';
         document.getElementById('paraMarginVal').innerText = pm + 'px';
-        
         contentList.style.fontSize = fs + 'px';
-        
-        // 更新所有已生成的段落块间距
         const blocks = document.querySelectorAll('.paragraph-block');
         blocks.forEach(b => b.style.marginBottom = pm + 'px');
-
-        // 背景横线对齐逻辑（基于字体大小 * 固定行高1.6）
-        const bgSize = fs * 1.6;
-        contentList.style.backgroundSize = `100% ${bgSize}px`;
+        contentList.style.backgroundSize = `100% ${fs * 1.6}px`;
     }
 
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
 
+    // 核心恢复：标点过滤函数
+    function cleanTextForSpeech(text) {
+        const pattern = /["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g;
+        return text.replace(pattern, ' ');
+    }
+
     function speak(text) {
         return new Promise((resolve) => {
-            const utterance = new SpeechSynthesisUtterance(text.replace(/[.,!?;:。，！？；：]/g, ' '));
+            const cleaned = cleanTextForSpeech(text);
+            const utterance = new SpeechSynthesisUtterance(cleaned);
             utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
             utterance.rate = 0.85;
             utterance.onend = resolve;
@@ -236,7 +232,6 @@ C'est une magnifique journée.
             const pWrapper = document.createElement('div');
             pWrapper.className = 'paragraph-block';
             pWrapper.style.marginBottom = currentMargin;
-            
             const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
             sentences.forEach(sText => {
                 const span = document.createElement('span');
@@ -244,7 +239,6 @@ C'est une magnifique journée.
                 span.className = `sentence-unit ${isZh ? 'lang-zh' : 'lang-fr'}`;
                 span.innerText = sText + " ";
                 pWrapper.appendChild(span);
-                
                 let shouldRead = (readMode === 'all') || (readMode === 'fr' && !isZh) || (readMode === 'zh' && isZh);
                 allSentenceData.push({ element: span, text: sText, shouldRead: shouldRead });
             });
@@ -270,6 +264,7 @@ C'est une magnifique journée.
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
+            // 标题阅读
             if (titleText) {
                 stageTitle.classList.add('active');
                 await speak(titleText);
@@ -277,6 +272,7 @@ C'est une magnifique journée.
                 stageTitle.classList.remove('active');
             }
 
+            // 正文阅读
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 const offsetTop = data.element.offsetTop;
