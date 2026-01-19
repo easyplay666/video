@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-艺术紧凑版</title>
+    <title>中法双语教学-全能艺术版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -13,7 +13,6 @@
             --border-color: #adc178; 
             --zh-color: #333;
             --fr-color: #2c5d63;
-            --line-height: 1.8;
         }
         
         body { 
@@ -27,7 +26,7 @@
             display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; 
         }
         .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
-        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #444; padding: 5px 12px; border-radius: 20px; }
+        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
         
         .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
         #titleInput { padding: 10px; border-radius: 4px; border: none; font-weight: bold; font-size: 16px; }
@@ -46,19 +45,25 @@
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 固定艺术边框 */
+        /* --- 艺术边框系统：确保可见 --- */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
             border: 18px solid transparent;
             border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
+            box-sizing: border-box;
         }
+        .corner-mark {
+            position: absolute; width: 45px; height: 45px;
+            border: 3px solid var(--border-color); z-index: 60; pointer-events: none;
+        }
+        .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+        .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
 
-        /* --- 固定标题区域：优化间距 --- */
+        /* 固定标题区 */
         #fixed-header {
             width: 100%;
-            /* 调整为约两行的高度间距 (45px 左右) */
-            padding: 45px 55px 15px 55px; 
+            padding: 40px 55px 15px 55px; /* 约两行高度 */
             box-sizing: border-box;
             z-index: 40;
             text-align: center;
@@ -66,12 +71,8 @@
             background-color: var(--paper-bg);
         }
         #stage-title {
-            font-size: 26px;
-            font-weight: bold;
-            color: var(--zh-color);
-            transition: 0.3s;
-            display: inline-block;
-            padding: 4px 12px;
+            font-size: 26px; font-weight: bold; color: var(--zh-color);
+            transition: 0.3s; display: inline-block; padding: 4px 12px;
         }
         #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
 
@@ -86,7 +87,6 @@
         }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         #intro-screen.hidden { transform: translateY(-100%); }
-
         .intro-box { text-align: center; }
         .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; display: block; }
         .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; margin-top: 5px; }
@@ -94,13 +94,15 @@
         /* 文字滚动区 */
         #scroll-content {
             flex: 1;
-            width: 100%; padding: 15px 55px 60px 55px; 
+            width: 100%; padding: 10px 55px 60px 55px; 
             box-sizing: border-box; overflow-y: hidden; z-index: 10;
         }
         #content-list {
             background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
-            background-size: 100% calc(22px * 1.8);
-            line-height: var(--line-height);
+            /* 动态控制 background-size 和 line-height */
+            background-size: 100% 40px; 
+            line-height: 1.8;
+            transition: all 0.2s ease;
         }
         
         .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
@@ -122,15 +124,21 @@
         
         <div class="setting-item">
             <span>字体:</span>
-            <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="updateFontSize(this.value)">
+            <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()">
             <span id="fontSizeVal">22px</span>
         </div>
 
         <div class="setting-item">
-            <span>阅读模式:</span>
+            <span>行距:</span>
+            <input type="range" id="lineHeightInput" min="1.2" max="2.5" step="0.1" value="1.8" oninput="applyStyles()">
+            <span id="lineHeightVal">1.8</span>
+        </div>
+
+        <div class="setting-item">
+            <span>阅读:</span>
             <label><input type="radio" name="readMode" value="all" checked> 全部</label>
-            <label><input type="radio" name="readMode" value="fr"> 仅法语</label>
-            <label><input type="radio" name="readMode" value="zh"> 仅中文</label>
+            <label><input type="radio" name="readMode" value="fr"> 仅法</label>
+            <label><input type="radio" name="readMode" value="zh"> 仅中</label>
         </div>
         <button id="startBtn">开始录制视频</button>
     </div>
@@ -147,6 +155,8 @@ Nous parlons de l'amitié aujourd'hui.
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
         <div id="frame-overlay"></div>
+        <div class="corner-mark tl"></div>
+        <div class="corner-mark br"></div>
         
         <div id="intro-screen">
             <div class="intro-box">
@@ -178,11 +188,20 @@ Nous parlons de l'amitié aujourd'hui.
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
     }
 
-    function updateFontSize(val) {
-        document.getElementById('fontSizeVal').innerText = val + 'px';
-        contentList.style.fontSize = val + 'px';
-        const lineHeight = val * 1.8;
-        contentList.style.backgroundSize = `100% ${lineHeight}px`;
+    // 综合应用字体和行高样式
+    function applyStyles() {
+        const fs = document.getElementById('fontSizeInput').value;
+        const lh = document.getElementById('lineHeightInput').value;
+        
+        document.getElementById('fontSizeVal').innerText = fs + 'px';
+        document.getElementById('lineHeightVal').innerText = lh;
+        
+        contentList.style.fontSize = fs + 'px';
+        contentList.style.lineHeight = lh;
+        
+        // 精准对齐背景横线：横线间距 = 字体大小 * 行高
+        const bgSize = fs * lh;
+        contentList.style.backgroundSize = `100% ${bgSize}px`;
     }
 
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
@@ -241,7 +260,6 @@ Nous parlons de l'amitié aujourd'hui.
                 document.getElementById('download-link').style.display = 'block';
                 document.body.classList.remove('is-recording');
                 introScreen.classList.remove('hidden');
-                stageTitle.classList.remove('active');
             };
 
             recorder.start();
@@ -278,6 +296,9 @@ Nous parlons de l'amitié aujourd'hui.
             document.body.classList.remove('is-recording');
         }
     }
+
+    // 初始化样式
+    applyStyles();
     document.getElementById('startBtn').addEventListener('click', startProcess);
 </script>
 
