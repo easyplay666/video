@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-标点优化版</title>
+    <title>中法双语教学-固定标题艺术版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -24,11 +24,15 @@
         
         #ui-controls { 
             background: #333; padding: 20px; width: 100%; 
-            display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 3000; 
+            display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; 
         }
-        .controls-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
         .setting-item { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #444; padding: 5px 12px; border-radius: 20px; }
-        textarea { width: 90%; max-width: 800px; height: 60px; padding: 10px; border-radius: 4px; border: none; }
+        
+        .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
+        #titleInput { padding: 10px; border-radius: 4px; border: none; font-weight: bold; font-size: 16px; }
+        textarea { height: 80px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
+        
         #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         #stage-viewport { margin: 20px auto; display: flex; justify-content: center; align-items: center; background: #000; }
@@ -36,11 +40,13 @@
         #recording-stage {
             background-color: var(--paper-bg);
             position: relative; box-sizing: border-box; overflow: hidden; z-index: 1;
+            display: flex; flex-direction: column;
         }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
+        /* 固定艺术边框 */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
@@ -48,13 +54,27 @@
             border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
         }
 
-        .corner-mark {
-            position: absolute; width: 45px; height: 45px;
-            border: 3px solid var(--border-color); z-index: 60;
+        /* --- 固定标题区域 --- */
+        #fixed-header {
+            width: 100%;
+            padding: 85px 55px 15px 55px; /* 顶部留出空间 */
+            box-sizing: border-box;
+            z-index: 40;
+            text-align: center;
+            border-bottom: 2px solid rgba(173, 193, 120, 0.3);
+            background-color: var(--paper-bg);
         }
-        .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
-        .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+        #stage-title {
+            font-size: 26px;
+            font-weight: bold;
+            color: var(--zh-color);
+            transition: 0.3s;
+            display: inline-block;
+            padding: 4px 10px;
+        }
+        #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.15); border-radius: 4px; }
 
+        /* 片头动画 */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
@@ -67,12 +87,13 @@
         #intro-screen.hidden { transform: translateY(-100%); }
 
         .intro-box { text-align: center; }
-        .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 0.5s; }
-        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; opacity: 0; animation: titleFadeIn 1.2s forwards 1s; }
-        @keyframes titleFadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; display: block; }
+        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; margin-top: 5px; }
 
+        /* 文字滚动区 */
         #scroll-content {
-            width: 100%; height: 100%; padding: 85px 55px;
+            flex: 1;
+            width: 100%; padding: 15px 55px 85px 55px; /* 底部留出空间 */
             box-sizing: border-box; overflow-y: hidden; z-index: 10;
         }
         #content-list {
@@ -99,7 +120,7 @@
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
         
         <div class="setting-item">
-            <span>字体大小:</span>
+            <span>字体:</span>
             <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="updateFontSize(this.value)">
             <span id="fontSizeVal">22px</span>
         </div>
@@ -110,26 +131,31 @@
             <label><input type="radio" name="readMode" value="fr"> 仅法语</label>
             <label><input type="radio" name="readMode" value="zh"> 仅中文</label>
         </div>
-
         <button id="startBtn">开始录制视频</button>
     </div>
-    <textarea id="multiInput">Il a dit : "C'est une 《magnifique》 expérience."
-他说过：“这是一次《美妙》的体验。”
-Le français — une langue de poésie.
-法语——一门充满诗意的语言。</textarea>
+
+    <div class="input-group">
+        <input type="text" id="titleInput" placeholder="请输入课程标题（例如：L'Amitié 友谊）" value="L'Amitié 友谊">
+        <textarea id="multiInput" placeholder="请输入正文内容">C'est une magnifique journée.
+这是一个美好的日子。
+Nous parlons de l'amitié aujourd'hui.
+今天我们谈论友谊。</textarea>
+    </div>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
         <div id="frame-overlay"></div>
-        <div class="corner-mark tl"></div>
-        <div class="corner-mark br"></div>
-
+        
         <div id="intro-screen">
             <div class="intro-box">
                 <span class="title-fr">ÉTUDE DU FRANÇAIS</span>
                 <span class="title-zh">中文法语学习（中法双语）</span>
             </div>
+        </div>
+
+        <div id="fixed-header">
+            <div id="stage-title"></div>
         </div>
 
         <div id="scroll-content">
@@ -145,6 +171,7 @@ Le français — une langue de poésie.
     const scrollContent = document.getElementById('scroll-content');
     const contentList = document.getElementById('content-list');
     const introScreen = document.getElementById('intro-screen');
+    const stageTitle = document.getElementById('stage-title');
 
     function setMode(mode) {
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
@@ -159,12 +186,8 @@ Le français — une langue de poésie.
 
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
 
-    // 核心修改：加强版标点过滤，确保“引号”、“书名号”、“破折号”等不会被读出
     function cleanTextForSpeech(text) {
-        // 匹配各种中英文标点：引号、书名号、括号、破折号、星号、尖括号等
-        const pattern = /["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g;
-        // 替换为空格以保持朗读节奏停顿
-        return text.replace(pattern, ' ');
+        return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' ');
     }
 
     function speak(text) {
@@ -179,10 +202,12 @@ Le français — une langue de poésie.
     }
 
     async function startProcess() {
+        const titleText = document.getElementById('titleInput').value;
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
         const readMode = document.querySelector('input[name="readMode"]:checked').value;
         
+        stageTitle.innerText = titleText;
         contentList.innerHTML = '';
         const allSentenceData = [];
 
@@ -215,6 +240,7 @@ Le français — une langue de poésie.
                 document.getElementById('download-link').style.display = 'block';
                 document.body.classList.remove('is-recording');
                 introScreen.classList.remove('hidden');
+                stageTitle.classList.remove('active');
             };
 
             recorder.start();
@@ -222,6 +248,15 @@ Le français — une langue de poésie.
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
+            // 第一步：朗读标题
+            if (titleText) {
+                stageTitle.classList.add('active');
+                await speak(titleText);
+                await new Promise(r => setTimeout(r, 600));
+                stageTitle.classList.remove('active');
+            }
+
+            // 第二步：循环正文
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 const offsetTop = data.element.offsetTop;
