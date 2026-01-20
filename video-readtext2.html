@@ -2,18 +2,13 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-终极纯净版</title>
+    <title>中法双语教学-功能视觉完美版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { 
-            --yt-red: #cc0000; 
-            --paper-bg: #fdfaf3; 
-            --soft-green: #e9f5db;
-            --soft-pink: #fce4ec;
-            --border-color: #adc178; 
-            --zh-color: #333;
-            --fr-color: #2c5d63;
+            --yt-red: #cc0000; --paper-bg: #fdfaf3; 
+            --soft-green: #e9f5db; --soft-pink: #fce4ec;
+            --border-color: #adc178; --zh-color: #333; --fr-color: #2c5d63;
         }
         
         body { 
@@ -22,38 +17,29 @@
             display: flex; flex-direction: column; align-items: center;
         }
         
-        /* UI区 */
         #ui-controls { 
             background: #333; padding: 20px; width: 100%; 
             display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; 
         }
         .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
         .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
-        
         .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
         #titleInput { padding: 10px; border-radius: 4px; border: none; font-weight: bold; font-size: 16px; }
         textarea { height: 80px; padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
-        
-        #startBtn { padding: 10px 30px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
 
         #stage-viewport { margin: 20px auto; display: flex; justify-content: center; align-items: center; background: #000; }
 
         #recording-stage {
             background-color: var(--paper-bg);
-            position: relative; box-sizing: border-box; overflow: hidden; z-index: 1;
-            display: flex; flex-direction: column;
+            position: relative; box-sizing: border-box; overflow: hidden; 
+            display: flex; flex-direction: column; z-index: 1;
         }
 
-        /* 初始尺寸 */
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 录制时舞台强制全屏显示以便 Canvas 抓取最高质量 */
-        body.is-recording #recording-stage {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999;
-        }
-
-        /* 艺术边框 */
+        /* 恢复原有的艺术边框逻辑 */
         #frame-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 50; 
@@ -68,58 +54,38 @@
         .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
         .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
 
-        /* 固定标题区 */
         #fixed-header {
-            width: 100%;
-            padding: 40px 55px 15px 55px; 
-            box-sizing: border-box;
-            z-index: 40;
-            text-align: center;
-            border-bottom: 1px solid rgba(173, 193, 120, 0.2);
-            background-color: var(--paper-bg);
+            width: 100%; padding: 40px 55px 15px 55px; 
+            box-sizing: border-box; z-index: 40; text-align: center;
+            border-bottom: 1px solid rgba(173, 193, 120, 0.2); background-color: var(--paper-bg);
         }
-        #stage-title {
-            font-size: 26px; font-weight: bold; color: var(--zh-color);
-            transition: 0.3s; display: inline-block; padding: 4px 12px;
-        }
+        #stage-title { font-size: 26px; font-weight: bold; color: var(--zh-color); display: inline-block; padding: 4px 12px; transition: 0.3s; }
         #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
 
-        /* 片头动画 */
         #intro-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
-            background-size: 400% 400%;
-            animation: gradientBG 6s ease infinite;
+            background-size: 400% 400%; animation: gradientBG 6s ease infinite;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 100; transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
         }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         #intro-screen.hidden { transform: translateY(-100%); }
-        .intro-box { text-align: center; }
-        .title-fr { font-family: 'Cinzel', serif; font-size: 34px; color: #fff; letter-spacing: 4px; display: block; }
-        .title-zh { font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block; margin-top: 5px; }
 
-        /* 文字区域 */
-        #scroll-content {
-            flex: 1;
-            width: 100%; padding: 10px 55px 60px 55px; 
-            box-sizing: border-box; overflow-y: hidden; z-index: 10;
-        }
-        #content-list {
-            background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
-            background-size: 100% 40px; 
-            line-height: 1.6;
-        }
+        #scroll-content { flex: 1; width: 100%; padding: 10px 55px 60px 55px; box-sizing: border-box; overflow-y: hidden; z-index: 10; }
+        #content-list { background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px); background-size: 100% 40px; line-height: 1.6; }
+        
         .paragraph-block { transition: margin-bottom 0.2s ease; }
         .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
         .lang-fr { color: var(--fr-color); font-style: italic; }
         .lang-zh { color: var(--zh-color); font-weight: 500; }
         .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
 
-        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 10000; }
+        /* 录制状态：舞台居中并锁定尺寸 */
+        body.is-recording #ui-controls { display: none; }
+        body.is-recording #stage-viewport { margin: 0; width: 100vw; height: 100vh; }
         
-        /* 录制用的 Canvas */
-        #record-canvas { display: none; }
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
     </style>
 </head>
 <body>
@@ -128,62 +94,40 @@
     <div class="controls-row">
         <button onclick="setMode('youtube')">16:9 (YouTube)</button>
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
-        
-        <div class="setting-item">
-            <span>字体:</span>
-            <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()">
-            <span id="fontSizeVal">22px</span>
-        </div>
-
-        <div class="setting-item">
-            <span>行间距:</span>
-            <input type="range" id="paraMarginInput" min="0" max="60" value="20" oninput="applyStyles()">
-            <span id="paraMarginVal">20px</span>
-        </div>
-
+        <div class="setting-item"><span>字体:</span><input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()"><span id="fontSizeVal">22px</span></div>
+        <div class="setting-item"><span>间距:</span><input type="range" id="paraMarginInput" min="0" max="60" value="20" oninput="applyStyles()"><span id="paraMarginVal">20px</span></div>
         <div class="setting-item">
             <span>阅读:</span>
             <label><input type="radio" name="readMode" value="all" checked> 全部</label>
             <label><input type="radio" name="readMode" value="fr"> 仅法</label>
             <label><input type="radio" name="readMode" value="zh"> 仅中</label>
         </div>
-        <button id="startBtn">开始导出纯净视频</button>
+        <button id="startBtn">开始制作视频</button>
     </div>
-
     <div class="input-group">
-        <input type="text" id="titleInput" placeholder="请输入课程标题" value="L'Amitié 友谊">
-        <textarea id="multiInput">Il a dit : "Bonjour !"
-他说过：“《你好》！”
-C'est magnifique —— n'est-ce pas ?
-这很美——不是吗？</textarea>
+        <input type="text" id="titleInput" value="L'Amitié 友谊">
+        <textarea id="multiInput">"Bonjour !" - 《你好》
+La vie est magnifique.
+生活是美好的。</textarea>
     </div>
 </div>
 
 <div id="stage-viewport">
     <div id="recording-stage" class="mode-youtube">
         <div id="frame-overlay"></div>
-        <div class="corner-mark tl"></div>
-        <div class="corner-mark br"></div>
-        
+        <div class="corner-mark tl"></div><div class="corner-mark br"></div>
         <div id="intro-screen">
-            <div class="intro-box">
+            <div style="text-align: center;">
                 <span class="title-fr">ÉTUDE DU FRANÇAIS</span>
                 <span class="title-zh">中文法语学习（中法双语）</span>
             </div>
         </div>
-
-        <div id="fixed-header">
-            <div id="stage-title"></div>
-        </div>
-
-        <div id="scroll-content">
-            <div id="content-list" style="font-size: 22px;"></div>
-        </div>
+        <div id="fixed-header"><div id="stage-title"></div></div>
+        <div id="scroll-content"><div id="content-list" style="font-size: 22px;"></div></div>
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载纯净比例视频</a>
-<canvas id="record-canvas"></canvas>
+<a id="download-link" href="#">⬇ 下载视频文件</a>
 
 <script>
     const stage = document.getElementById('recording-stage');
@@ -191,11 +135,11 @@ C'est magnifique —— n'est-ce pas ?
     const contentList = document.getElementById('content-list');
     const introScreen = document.getElementById('intro-screen');
     const stageTitle = document.getElementById('stage-title');
-    const recCanvas = document.getElementById('record-canvas');
 
     function setMode(mode) {
         if(document.body.classList.contains('is-recording')) return;
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
+        applyStyles();
     }
 
     function applyStyles() {
@@ -204,27 +148,12 @@ C'est magnifique —— n'est-ce pas ?
         document.getElementById('fontSizeVal').innerText = fs + 'px';
         document.getElementById('paraMarginVal').innerText = pm + 'px';
         contentList.style.fontSize = fs + 'px';
-        const blocks = document.querySelectorAll('.paragraph-block');
-        blocks.forEach(b => b.style.marginBottom = pm + 'px');
+        document.querySelectorAll('.paragraph-block').forEach(b => b.style.marginBottom = pm + 'px');
         contentList.style.backgroundSize = `100% ${fs * 1.6}px`;
     }
 
-    function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
-
     function cleanTextForSpeech(text) {
-        const pattern = /["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g;
-        return text.replace(pattern, ' ');
-    }
-
-    function speak(text) {
-        return new Promise((resolve) => {
-            const cleaned = cleanTextForSpeech(text);
-            const utterance = new SpeechSynthesisUtterance(cleaned);
-            utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
-            utterance.rate = 0.85;
-            utterance.onend = resolve;
-            window.speechSynthesis.speak(utterance);
-        });
+        return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' ');
     }
 
     async function startProcess() {
@@ -232,7 +161,6 @@ C'est magnifique —— n'est-ce pas ?
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
         const readMode = document.querySelector('input[name="readMode"]:checked').value;
-        const currentMargin = document.getElementById('paraMarginInput').value + 'px';
         
         stageTitle.innerText = titleText;
         contentList.innerHTML = '';
@@ -241,44 +169,25 @@ C'est magnifique —— n'est-ce pas ?
         paragraphs.forEach(pText => {
             const pWrapper = document.createElement('div');
             pWrapper.className = 'paragraph-block';
-            pWrapper.style.marginBottom = currentMargin;
+            pWrapper.style.marginBottom = document.getElementById('paraMarginInput').value + 'px';
             const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
             sentences.forEach(sText => {
                 const span = document.createElement('span');
-                const isZh = isChinese(sText);
+                const isZh = /[\u4e00-\u9fa5]/.test(sText);
                 span.className = `sentence-unit ${isZh ? 'lang-zh' : 'lang-fr'}`;
                 span.innerText = sText + " ";
                 pWrapper.appendChild(span);
-                let shouldRead = (readMode === 'all') || (readMode === 'fr' && !isZh) || (readMode === 'zh' && isZh);
-                allSentenceData.push({ element: span, text: sText, shouldRead: shouldRead });
+                allSentenceData.push({ element: span, text: sText, shouldRead: (readMode==='all'||(readMode==='fr'&&!isZh)||(readMode==='zh'&&isZh)) });
             });
             contentList.appendChild(pWrapper);
         });
 
         try {
-            // 记录原始尺寸
-            const originalW = stage.offsetWidth;
-            const originalH = stage.offsetHeight;
-
-            // 1. 请求录音权限（用于捕获TTS语音）
-            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // 2. 进入录制模式（舞台全屏）
+            // 使用最稳定的屏幕录制，但限制比例
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
             document.body.classList.add('is-recording');
             
-            // 3. 配置 Canvas 尺寸与导出视频尺寸一致
-            recCanvas.width = originalW;
-            recCanvas.height = originalH;
-            const ctx = recCanvas.getContext('2d');
-            const videoStream = recCanvas.captureStream(30); // 30 FPS
-
-            // 4. 合并音视频流
-            const combinedStream = new MediaStream([
-                ...videoStream.getVideoTracks(),
-                ...audioStream.getAudioTracks()
-            ]);
-
-            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
             const chunks = [];
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
@@ -290,68 +199,33 @@ C'est magnifique —— n'est-ce pas ?
             };
 
             recorder.start();
-
-            // 实时渲染循环：将 DOM 绘制到 Canvas
-            let isRendering = true;
-            const renderLoop = async () => {
-                if (isRendering) {
-                    const canvasData = await html2canvas(stage, {
-                        scale: 1,
-                        width: originalW,
-                        height: originalH,
-                        useCORS: true,
-                        backgroundColor: null
-                    });
-                    ctx.clearRect(0, 0, originalW, originalH);
-                    ctx.drawImage(canvasData, 0, 0);
-                    requestAnimationFrame(renderLoop);
-                }
-            };
-            renderLoop();
-
-            // 5. 执行原有播放流程
             await new Promise(r => setTimeout(r, 3500));
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
-            if (titleText) {
-                stageTitle.classList.add('active');
-                await speak(titleText);
-                await new Promise(r => setTimeout(r, 600));
-                stageTitle.classList.remove('active');
-            }
+            const speak = (t) => new Promise(res => {
+                const u = new SpeechSynthesisUtterance(cleanTextForSpeech(t));
+                u.lang = /[\u4e00-\u9fa5]/.test(t) ? 'zh-CN' : 'fr-FR';
+                u.rate = 0.85; u.onend = res; window.speechSynthesis.speak(u);
+            });
 
-            for (let data of allSentenceData) {
-                data.element.classList.add('active');
-                const offsetTop = data.element.offsetTop;
-                scrollContent.scrollTo({
-                    top: offsetTop - scrollContent.offsetHeight / 2,
-                    behavior: 'smooth'
-                });
+            if(titleText){ stageTitle.classList.add('active'); await speak(titleText); stageTitle.classList.remove('active'); }
 
-                if (data.shouldRead) await speak(data.text);
-                else await new Promise(r => setTimeout(r, 600)); 
-                
-                await new Promise(r => setTimeout(r, 400));
-                data.element.classList.remove('active');
+            for (let d of allSentenceData) {
+                d.element.classList.add('active');
+                scrollContent.scrollTo({ top: d.element.offsetTop - scrollContent.offsetHeight/2, behavior: 'smooth' });
+                if(d.shouldRead) await speak(d.text); else await new Promise(r => setTimeout(r, 600));
+                d.element.classList.remove('active');
             }
 
             await new Promise(r => setTimeout(r, 1000));
-            
-            // 6. 结束录制
-            isRendering = false;
             recorder.stop();
-            audioStream.getTracks().forEach(t => t.stop());
-            
-        } catch (e) {
-            console.error(e);
-            document.body.classList.remove('is-recording');
-        }
+            stream.getTracks().forEach(t => t.stop());
+        } catch (e) { document.body.classList.remove('is-recording'); }
     }
 
     applyStyles();
     document.getElementById('startBtn').addEventListener('click', startProcess);
 </script>
-
 </body>
 </html>
