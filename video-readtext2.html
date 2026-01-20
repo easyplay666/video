@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>中法双语教学-纯净视频录制版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root { 
+            --yt-red: #cc0000; --paper-bg: #fdfaf3; --soft-green: #e9f5db;
+            --soft-pink: #fce4ec; --border-color: #adc178; 
+            --zh-color: #333; --fr-color: #2c5d63;
+        }
+        
+        body { 
+            font-family: "Georgia", "PingFang SC", serif; 
+            background: #1a1a1a; color: white; margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        
+        #ui-controls { 
+            background: #333; padding: 20px; width: 100%; 
+            display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; 
+        }
+        .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
+        .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
+        #titleInput, textarea { padding: 10px; border-radius: 4px; border: none; }
+        #startBtn { padding: 10px 30px; cursor: pointer; background: var(--yt-red); color: white; border: none; border-radius: 4px; font-weight: bold; }
+
+        /* 视频视口 */
+        #stage-viewport { margin: 20px auto; background: #000; padding: 0; overflow: hidden; border: 5px solid #333; }
+
+        #recording-stage {
+            background-color: var(--paper-bg);
+            position: relative; box-sizing: border-box; overflow: hidden; 
+            display: flex; flex-direction: column;
+        }
+
+        .mode-youtube { width: 854px; height: 480px; }
+        .mode-mobile { width: 360px; height: 640px; }
+
+        /* 艺术装饰 */
+        #frame-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50; 
+            border: 18px solid transparent;
+            border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
+        }
+        .corner-mark {
+            position: absolute; width: 45px; height: 45px;
+            border: 3px solid var(--border-color); z-index: 60;
+        }
+        .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+        .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+
+        #fixed-header {
+            width: 100%; padding: 40px 55px 15px 55px; 
+            box-sizing: border-box; z-index: 40; text-align: center;
+            border-bottom: 1px solid rgba(173, 193, 120, 0.2); background-color: var(--paper-bg);
+        }
+        #stage-title { font-size: 26px; font-weight: bold; color: var(--zh-color); transition: 0.3s; display: inline-block; padding: 4px 12px; }
+        #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
+
+        #intro-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
+            background-size: 400% 400%; animation: gradientBG 6s ease infinite;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        #intro-screen.hidden { transform: translateY(-100%); }
+
+        #scroll-content {
+            flex: 1; width: 100%; padding: 10px 55px 60px 55px; 
+            box-sizing: border-box; overflow-y: hidden; z-index: 10;
+        }
+        #content-list {
+            background-image: linear-gradient(rgba(173, 193, 120, 0.2) 1px, transparent 1px);
+            background-size: 100% 40px; line-height: 1.6;
+        }
+        .paragraph-block { transition: margin-bottom 0.2s ease; }
+        .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; font-size: 22px; }
+        .lang-fr { color: var(--fr-color); font-style: italic; }
+        .lang-zh { color: var(--zh-color); font-weight: 500; }
+        .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
+
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
+        
+        /* 录制提示 */
+        #recording-hint { display: none; color: #ffeb3b; font-weight: bold; margin-bottom: 10px; }
+        body.is-recording #recording-hint { display: block; }
+        body.is-recording #ui-controls { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="ui-controls">
+    <div class="controls-row">
+        <button onclick="setMode('youtube')">16:9 (YouTube)</button>
+        <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
+        <div class="setting-item">
+            <span>字体:</span>
+            <input type="range" id="fontSizeInput" min="12" max="36" value="22" oninput="applyStyles()">
+        </div>
+        <div class="setting-item">
+            <span>间距:</span>
+            <input type="range" id="paraMarginInput" min="0" max="60" value="20" oninput="applyStyles()">
+        </div>
+        <button id="startBtn">生成纯净视频</button>
+    </div>
+    <div class="input-group">
+        <input type="text" id="titleInput" value="L'Amitié 友谊">
+        <textarea id="multiInput">Bonjour.
+大家好。
+"La vie est belle."
+“生活是美好的。”</textarea>
+    </div>
+</div>
+
+<div id="recording-hint">正在合成视频，请勿操作网页...</div>
+
+<div id="stage-viewport">
+    <div id="recording-stage" class="mode-youtube">
+        <div id="frame-overlay"></div>
+        <div class="corner-mark tl"></div>
+        <div class="corner-mark br"></div>
+        <div id="intro-screen">
+            <div style="text-align: center;">
+                <span style="font-family: 'Cinzel', serif; font-size: 34px; color: #fff; display: block;">ÉTUDE DU FRANÇAIS</span>
+                <span style="font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block;">中文法语学习（中法双语）</span>
+            </div>
+        </div>
+        <div id="fixed-header">
+            <div id="stage-title"></div>
+        </div>
+        <div id="scroll-content">
+            <div id="content-list"></div>
+        </div>
+    </div>
+</div>
+
+<a id="download-link" href="#">⬇ 下载纯净格式视频</a>
+
+<script>
+    const stage = document.getElementById('recording-stage');
+    const scrollContent = document.getElementById('scroll-content');
+    const contentList = document.getElementById('content-list');
+    const introScreen = document.getElementById('intro-screen');
+    const stageTitle = document.getElementById('stage-title');
+
+    function setMode(mode) {
+        stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
+    }
+
+    function applyStyles() {
+        const fs = document.getElementById('fontSizeInput').value;
+        const pm = document.getElementById('paraMarginInput').value;
+        contentList.style.fontSize = fs + 'px';
+        const blocks = document.querySelectorAll('.paragraph-block');
+        blocks.forEach(b => b.style.marginBottom = pm + 'px');
+        contentList.style.backgroundSize = `100% ${fs * 1.6}px`;
+    }
+
+    function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
+
+    function cleanTextForSpeech(text) {
+        return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' ');
+    }
+
+    // 录制逻辑：使用屏幕录制但通过设置 MediaStream 的分辨率强制锁定
+    async function startProcess() {
+        const titleText = document.getElementById('titleInput').value;
+        const rawText = document.getElementById('multiInput').value;
+        const paragraphs = rawText.split('\n').filter(p => p.trim());
+        const currentMargin = document.getElementById('paraMarginInput').value + 'px';
+        
+        stageTitle.innerText = titleText;
+        contentList.innerHTML = '';
+        const allSentenceData = [];
+
+        paragraphs.forEach(pText => {
+            const pWrapper = document.createElement('div');
+            pWrapper.className = 'paragraph-block';
+            pWrapper.style.marginBottom = currentMargin;
+            const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
+            sentences.forEach(sText => {
+                const span = document.createElement('span');
+                span.className = `sentence-unit ${isChinese(sText) ? 'lang-zh' : 'lang-fr'}`;
+                span.innerText = sText + " ";
+                pWrapper.appendChild(span);
+                allSentenceData.push({ element: span, text: sText });
+            });
+            contentList.appendChild(pWrapper);
+        });
+
+        try {
+            // 提示：为了纯净，录制时请依然选择“此标签页”，但我们会自动裁剪
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    displaySurface: "browser",
+                    width: stage.offsetWidth,
+                    height: stage.offsetHeight
+                },
+                audio: true
+            });
+
+            // 获取视频轨道并应用裁剪约束（如果浏览器支持）
+            const videoTrack = stream.getVideoTracks()[0];
+            
+            document.body.classList.add('is-recording');
+            
+            // 这里的 mimeType 建议使用更通用的 webm
+            const recorder = new MediaRecorder(stream, { 
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 8000000 
+            });
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                document.getElementById('download-link').href = URL.createObjectURL(blob);
+                document.getElementById('download-link').style.display = 'block';
+                document.body.classList.remove('is-recording');
+                introScreen.classList.remove('hidden');
+            };
+
+            recorder.start();
+            await new Promise(r => setTimeout(r, 3500));
+            introScreen.classList.add('hidden');
+            await new Promise(r => setTimeout(r, 800));
+
+            // 阅读逻辑
+            const speak = (text) => {
+                return new Promise((resolve) => {
+                    const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
+                    utterance.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
+                    utterance.rate = 0.85;
+                    utterance.onend = resolve;
+                    window.speechSynthesis.speak(utterance);
+                });
+            };
+
+            if (titleText) {
+                stageTitle.classList.add('active');
+                await speak(titleText);
+                await new Promise(r => setTimeout(r, 600));
+                stageTitle.classList.remove('active');
+            }
+
+            for (let data of allSentenceData) {
+                data.element.classList.add('active');
+                const offsetTop = data.element.offsetTop;
+                scrollContent.scrollTo({
+                    top: offsetTop - scrollContent.offsetHeight / 2,
+                    behavior: 'smooth'
+                });
+                await speak(data.text);
+                await new Promise(r => setTimeout(r, 400));
+                data.element.classList.remove('active');
+            }
+
+            await new Promise(r => setTimeout(r, 1000));
+            recorder.stop();
+            stream.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            document.body.classList.remove('is-recording');
+        }
+    }
+
+    applyStyles();
+    document.getElementById('startBtn').addEventListener('click', startProcess);
+</script>
+
+</body>
+</html>
