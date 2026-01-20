@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学-纯净格式全能版</title>
+    <title>中法双语教学视频系统 v1.5.1-Final</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -13,48 +13,33 @@
         
         body { font-family: "Georgia", "PingFang SC", serif; background: #1a1a1a; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
         
-        #ui-controls { background: #333; padding: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; }
+        #ui-controls { background: #333; padding: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; position: relative;}
         .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
         .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
         .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
         #titleInput, textarea { padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
         #startBtn { padding: 10px 30px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 4px; font-weight: bold; }
 
-        /* 舞台容器 */
+        /* 数值显示样式 */
+        .value-display { color: #fdbb2d; font-weight: bold; min-width: 35px; text-align: center; }
+
+        #version-tag { position: absolute; bottom: 5px; right: 10px; font-size: 10px; color: #777; font-family: monospace; }
+
         #stage-viewport { margin: 20px auto; background: #000; overflow: hidden; display: flex; justify-content: center; border: 2px solid #555; }
-        
-        #recording-stage {
-            background-color: var(--paper-bg);
-            position: relative; box-sizing: border-box; overflow: hidden; 
-            display: flex; flex-direction: column; z-index: 1;
-        }
+        #recording-stage { background-color: var(--paper-bg); position: relative; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; z-index: 1; }
 
         .mode-youtube { width: 854px; height: 480px; }
         .mode-mobile { width: 360px; height: 640px; }
 
-        /* 艺术边框 */
-        #frame-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 50; 
-            border: 20px solid transparent;
-            border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30;
-        }
+        #frame-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; border: 20px solid transparent; border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30; }
         .corner-mark { position: absolute; width: 45px; height: 45px; border: 3px solid var(--border-color); z-index: 60; }
         .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
         .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
 
-        /* 片头动画 */
-        #intro-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c);
-            background-size: 400% 400%; animation: gradientBG 6s ease infinite;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 100; transition: transform 0.8s ease-in-out;
-        }
+        #intro-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c); background-size: 400% 400%; animation: gradientBG 6s ease infinite; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: transform 0.8s ease-in-out; }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         #intro-screen.hidden { transform: translateY(-100%); }
 
-        /* 标题与正文 */
         #fixed-header { width: 100%; padding: 45px 55px 15px 55px; box-sizing: border-box; z-index: 40; text-align: center; border-bottom: 1px solid rgba(173,193,120,0.2); }
         #stage-title { font-size: 26px; font-weight: bold; color: var(--zh-color); display: inline-block; padding: 4px 12px; }
         #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
@@ -68,7 +53,6 @@
         .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
 
         #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
-        
         #recording-canvas { display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -79,23 +63,33 @@
     <div class="controls-row">
         <button onclick="setMode('youtube')">16:9 (YouTube)</button>
         <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
-        <div class="setting-item"><span>字体:</span><input type="range" id="fontSizeInput" min="14" max="40" value="24" oninput="applyStyles()"></div>
-        <div class="setting-item"><span>间距:</span><input type="range" id="paraMarginInput" min="0" max="80" value="25" oninput="applyStyles()"></div>
+        
+        <div class="setting-item">
+            <span>字体:</span>
+            <input type="range" id="fontSizeInput" min="14" max="40" value="24" oninput="applyStyles()">
+            <span id="fontSizeVal" class="value-display">24px</span>
+        </div>
+        
+        <div class="setting-item">
+            <span>间距:</span>
+            <input type="range" id="paraMarginInput" min="0" max="80" value="25" oninput="applyStyles()">
+            <span id="paraMarginVal" class="value-display">25px</span>
+        </div>
+
         <div class="setting-item">
             <span>阅读:</span>
             <label><input type="radio" name="readMode" value="all" checked> 全部</label>
             <label><input type="radio" name="readMode" value="fr"> 仅法</label>
             <label><input type="radio" name="readMode" value="zh"> 仅中</label>
         </div>
-        <button id="startBtn">生成纯净录像并导出</button>
+        <button id="startBtn">生成录像并导出</button>
     </div>
     <div class="input-group">
         <input type="text" id="titleInput" value="中文法语学习（中法双语）">
         <textarea id="multiInput">Il a dit : "Bonjour !"
-他说过：“《你好》！”
-C'est magnifique —— n'est-ce pas ?
-这很美——不是吗？</textarea>
+他说过：“《你好》！”</textarea>
     </div>
+    <div id="version-tag">Build: v1.5.1-Final_Canvas</div>
 </div>
 
 <div id="stage-viewport">
@@ -113,7 +107,7 @@ C'est magnifique —— n'est-ce pas ?
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载纯净格式视频</a>
+<a id="download-link" href="#">⬇ 下载纯净格式视频 (v1.5.1)</a>
 <canvas id="recording-canvas"></canvas>
 
 <script>
@@ -131,6 +125,11 @@ C'est magnifique —— n'est-ce pas ?
     function applyStyles() {
         const fs = document.getElementById('fontSizeInput').value;
         const pm = document.getElementById('paraMarginInput').value;
+        
+        // 实时更新数值显示
+        document.getElementById('fontSizeVal').innerText = fs + 'px';
+        document.getElementById('paraMarginVal').innerText = pm + 'px';
+        
         contentList.style.fontSize = fs + 'px';
         const blocks = document.querySelectorAll('.paragraph-block');
         blocks.forEach(b => b.style.marginBottom = pm + 'px');
