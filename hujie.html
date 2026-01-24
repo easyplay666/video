@@ -3,210 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>跟随鼠标的梦幻蝴蝶</title>
+    <title>手机区域蝴蝶录制</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: #111; /* 深色背景更能显出蝴蝶的颜色 */
-            background: radial-gradient(circle, #2a2a2a 0%, #000000 100%);
-            overflow: hidden; /* 防止出现滚动条 */
-            height: 100vh;
-            cursor: none; /* 隐藏默认鼠标，让蝴蝶代替 */
+            background: #222;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
 
-        /* 蝴蝶容器 */
-        #butterfly {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            transform: translate(-50%, -50%); /* 居中对齐鼠标 */
-            pointer-events: none; /* 确保鼠标事件穿透 */
-            z-index: 9999;
-            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5)); /* 整体发光效果 */
+        /* --- 控制区 --- */
+        #controls {
+            margin: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 15px;
         }
 
-        /* 翅膀的公共样式 */
-        .wing {
-            position: absolute;
-            width: 60px;
-            height: 80px;
-            top: 10px;
-            background: linear-gradient(45deg, rgba(255, 0, 204, 0.8), rgba(51, 51, 255, 0.8));
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            transform-origin: bottom center; /* 扇动的轴心 */
-            opacity: 0.9;
-            mix-blend-mode: screen;
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        button:hover { background: #666; }
+        button#recordBtn { background: #cc0000; border: none; font-weight: bold; }
+        button#recordBtn:hover { background: #ff0000; }
+
+        #download-link {
+            display: none;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-top: 10px;
         }
 
-        /* 翅膀纹理装饰 */
-        .wing::after {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            background: radial-gradient(circle, #fff 10%, transparent 20%);
-            background-size: 10px 10px;
-            background-position: center;
-        }
-
-        /* 左翅膀 */
-        .left-wing {
-            left: -10px;
-            transform: rotate(-30deg);
-            animation: flap-left 0.2s infinite alternate ease-in-out;
-            background: linear-gradient(135deg, #ff00cc, #3333ff);
-        }
-
-        /* 右翅膀 */
-        .right-wing {
-            right: -10px;
-            transform: rotate(30deg) scaleX(-1); /* 镜像翻转 */
-            animation: flap-right 0.2s infinite alternate ease-in-out;
-            background: linear-gradient(135deg, #ff00cc, #3333ff);
-        }
-
-        /* 下翅膀 (更小一点) */
-        .wing-bottom {
-            width: 40px;
-            height: 50px;
-            top: 50px;
-            z-index: -1;
-            filter: brightness(0.8);
-        }
-        .left-bottom {
-            left: 0px;
-            transform-origin: top right;
-            animation: flap-left-bottom 0.2s infinite alternate ease-in-out;
-        }
-        .right-bottom {
-            right: 0px;
-            transform-origin: top left;
-            animation: flap-right-bottom 0.2s infinite alternate ease-in-out;
-        }
-
-        /* 身体 */
-        .body {
-            position: absolute;
-            width: 6px;
-            height: 50px;
-            background: #fff;
-            left: 50%;
-            top: 25px;
-            transform: translateX(-50%);
-            border-radius: 10px;
-            box-shadow: 0 0 10px #fff;
-        }
-
-        /* 触角 */
-        .antenna {
-            position: absolute;
-            width: 2px;
-            height: 25px;
-            background: #fff;
-            top: -15px;
-            left: 50%;
-            transform-origin: bottom;
-            opacity: 0.8;
-        }
-        .antenna.left { transform: translateX(-50%) rotate(-30deg); }
-        .antenna.right { transform: translateX(-50%) rotate(30deg); }
-
-        /* 翅膀扇动动画 */
-        @keyframes flap-left {
-            0% { transform: rotateY(0deg) rotate(-10deg); }
-            100% { transform: rotateY(60deg) rotate(-10deg); }
-        }
-        @keyframes flap-right {
-            0% { transform: rotateY(0deg) rotate(10deg) scaleX(-1); }
-            100% { transform: rotateY(60deg) rotate(10deg) scaleX(-1); }
+        /* --- 手机屏幕容器 --- */
+        /* 这是一个模拟手机的容器，蝴蝶只能在这里飞 */
+        #phone-screen {
+            width: 360px;   /* 手机宽度 */
+            height: 640px;  /* 手机高度 */
+            background: radial-gradient(circle at bottom, #1a1a2e 0%, #16213e 100%); /* 深邃夜空背景 */
+            border: 10px solid #111;
+            border-radius: 30px; /* 圆角机身 */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden; /* 关键：蝴蝶飞出边界会被藏起来 */
+            cursor: crosshair; /* 提示这里可以交互 */
+            transition: all 0.3s ease;
         }
         
-        @keyframes flap-left-bottom {
-            0% { transform: rotateY(0deg) rotate(-20deg); }
-            100% { transform: rotateY(60deg) rotate(-20deg); }
+        /* 手机顶部的刘海/听筒装饰 */
+        #phone-screen::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 120px; height: 25px;
+            background: #111;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 100;
         }
-        @keyframes flap-right-bottom {
-            0% { transform: rotateY(0deg) rotate(20deg) scaleX(-1); }
-            100% { transform: rotateY(60deg) rotate(20deg) scaleX(-1); }
+
+        /* --- 蝴蝶样式 (保持之前的漂亮设计) --- */
+        #butterfly {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* 让鼠标事件穿透蝴蝶，点到背景 */
+            z-index: 50;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+        }
+
+        .wing {
+            position: absolute;
+            width: 40px; height: 60px;
+            top: 5px;
+            background: linear-gradient(45deg, rgba(255, 0, 204, 0.9), rgba(0, 200, 255, 0.9));
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            transform-origin: bottom center;
+            mix-blend-mode: screen;
+        }
+        .wing::after {
+            content: ''; position: absolute;
+            top: 5px; left: 5px; right: 5px; bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+        }
+
+        .left-wing { left: 0; transform: rotate(-30deg); animation: flap-left 0.15s infinite alternate ease-in-out; }
+        .right-wing { right: 0; transform: rotate(30deg) scaleX(-1); animation: flap-right 0.15s infinite alternate ease-in-out; }
+
+        .wing-bottom { width: 25px; height: 35px; top: 40px; z-index: -1; filter: brightness(0.8); }
+        .left-bottom { left: 8px; transform-origin: top right; animation: flap-left-b 0.15s infinite alternate; }
+        .right-bottom { right: 8px; transform-origin: top left; animation: flap-right-b 0.15s infinite alternate; }
+
+        .body {
+            position: absolute; width: 4px; height: 35px; background: #fff;
+            left: 50%; top: 20px; transform: translateX(-50%);
+            border-radius: 10px; box-shadow: 0 0 5px #fff;
+        }
+        .antenna {
+            position: absolute; width: 1px; height: 15px; background: #fff; top: -10px; left: 50%;
+            opacity: 0.8; transform-origin: bottom;
+        }
+        .antenna.left { transform: translateX(-50%) rotate(-25deg); }
+        .antenna.right { transform: translateX(-50%) rotate(25deg); }
+
+        @keyframes flap-left { 0% { transform: rotateY(0deg) rotate(-10deg); } 100% { transform: rotateY(60deg) rotate(-10deg); } }
+        @keyframes flap-right { 0% { transform: rotateY(0deg) rotate(10deg) scaleX(-1); } 100% { transform: rotateY(60deg) rotate(10deg) scaleX(-1); } }
+        @keyframes flap-left-b { 0% { transform: rotateY(0deg) rotate(-20deg); } 100% { transform: rotateY(60deg) rotate(-20deg); } }
+        @keyframes flap-right-b { 0% { transform: rotateY(0deg) rotate(20deg) scaleX(-1); } 100% { transform: rotateY(60deg) rotate(20deg) scaleX(-1); } }
+
+
+        /* --- 录制模式样式 (关键！) --- */
+        /* 当 body 加上 is-recording 类时，隐藏所有多余元素，只居中显示手机 */
+        body.is-recording {
+            background: #000; /* 录制时背景全黑 */
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        body.is-recording #controls, 
+        body.is-recording #download-link {
+            display: none !important; /* 隐藏按钮 */
+        }
+        body.is-recording #phone-screen {
+            border: none; /* 录制时如果不想看到手机边框，可以把这个去掉，或者保留 */
+            border-radius: 0; /* 变成直角，充满画面？或者保持手机样 */
+            /* 如果想要录制结果就是手机画面，建议保持原样居中，
+               或者你想让画面充满，可以解开下面这行注释： */
+            /* transform: scale(1.5); */ 
+            box-shadow: none;
         }
 
     </style>
 </head>
 <body>
 
-    <div id="butterfly">
-        <div class="wing left-wing"></div>
-        <div class="wing wing-bottom left-bottom"></div>
-        
-        <div class="wing right-wing"></div>
-        <div class="wing wing-bottom right-bottom"></div>
+    <div id="controls">
+        <button id="recordBtn">🔴 开始录制视频</button>
+    </div>
+    <a id="download-link" href="#">⬇ 下载视频</a>
 
-        <div class="body">
-            <div class="antenna left"></div>
-            <div class="antenna right"></div>
+    <div id="phone-screen">
+        <div id="butterfly">
+            <div class="wing left-wing"></div>
+            <div class="wing wing-bottom left-bottom"></div>
+            <div class="wing right-wing"></div>
+            <div class="wing wing-bottom right-bottom"></div>
+            <div class="body">
+                <div class="antenna left"></div>
+                <div class="antenna right"></div>
+            </div>
         </div>
     </div>
 
     <script>
+        const phoneScreen = document.getElementById('phone-screen');
         const butterfly = document.getElementById('butterfly');
+        const recordBtn = document.getElementById('recordBtn');
+        const downloadLink = document.getElementById('download-link');
 
-        // 当前位置
-        let currentX = window.innerWidth / 2;
-        let currentY = window.innerHeight / 2;
+        // --- 蝴蝶逻辑 ---
         
-        // 目标位置 (鼠标位置)
-        let targetX = window.innerWidth / 2;
-        let targetY = window.innerHeight / 2;
-
-        // 旋转角度
+        // 蝴蝶在手机内的位置
+        let currentX = 180;
+        let currentY = 320;
+        // 目标位置
+        let targetX = 180;
+        let targetY = 320;
+        
         let angle = 0;
 
-        // 监听鼠标移动
+        // 监听整个文档的鼠标移动，但我们会把坐标转换限制在手机框内
         document.addEventListener('mousemove', (e) => {
-            targetX = e.clientX;
-            targetY = e.clientY;
+            // 获取手机屏幕相对于浏览器窗口的位置和大小
+            const rect = phoneScreen.getBoundingClientRect();
+
+            // 计算鼠标相对于手机左上角的坐标
+            let relativeX = e.clientX - rect.left;
+            let relativeY = e.clientY - rect.top;
+
+            // 限制（Clamp）坐标：不让蝴蝶飞出手机
+            // 比如：不能小于0，不能大于360
+            relativeX = Math.max(0, Math.min(relativeX, rect.width));
+            relativeY = Math.max(0, Math.min(relativeY, rect.height));
+
+            targetX = relativeX;
+            targetY = relativeY;
         });
 
-        // 动画循环函数
-        function animate() {
-            // 1. 计算距离差异 (用于平滑移动)
-            // 0.1 是延迟系数，越小越慢，越大跟得越紧
+        function animateButterfly() {
+            // 缓动跟随算法
             const dx = targetX - currentX;
             const dy = targetY - currentY;
 
-            // 2. 更新当前位置 (Lerp 线性插值算法)
-            currentX += dx * 0.08;
-            currentY += dy * 0.08;
+            // 速度系数 0.05，数值越小跟随越慢越平滑
+            currentX += dx * 0.05;
+            currentY += dy * 0.05;
 
-            // 3. 计算旋转角度
-            // 只有当移动距离足够大时才更新角度，防止停止时抖动
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                // Math.atan2 计算两点间的弧度
-                // + 90度 (Math.PI / 2) 是因为蝴蝶CSS默认是头朝上的
+            // 角度计算 (让头朝向飞行方向)
+            if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                // +90度是因为蝴蝶素材默认头朝上
                 const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+                // 角度平滑过渡
+                let angleDiff = targetAngle - angle;
+                // 处理 360/0 度突变问题
+                while (angleDiff > 180) angleDiff -= 360;
+                while (angleDiff < -180) angleDiff += 360;
                 
-                // 简单的角度平滑过渡
-                // 处理 360 度旋转临界点的问题比较复杂，这里用简单的逼近
-                angle += (targetAngle - angle) * 0.1;
+                angle += angleDiff * 0.1;
             }
 
-            // 4. 应用样式
+            // 应用位置 (注意：这是相对于 #phone-screen 的绝对定位)
             butterfly.style.left = `${currentX}px`;
             butterfly.style.top = `${currentY}px`;
             butterfly.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
 
-            // 5. 下一帧继续执行
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animateButterfly);
         }
+        
+        // 启动蝴蝶
+        animateButterfly();
 
-        // 启动动画
-        animate();
+
+        // --- 录制逻辑 (复用之前的技术) ---
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isRecording = false;
+
+        recordBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                // 1. 开始录制
+                try {
+                    // 请求录制当前标签页
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { displaySurface: "browser" },
+                        audio: false
+                    });
+
+                    // 进入“录制模式”：添加 class，隐藏按钮，背景变黑，手机居中
+                    document.body.classList.add('is-recording');
+                    downloadLink.style.display = 'none';
+
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) recordedChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        // 停止后的处理
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        downloadLink.href = url;
+                        downloadLink.download = 'butterfly_phone.webm';
+                        downloadLink.style.display = 'block';
+                        downloadLink.innerText = "✅ 录制完成，点击下载视频";
+                        
+                        // 退出录制模式，恢复界面
+                        document.body.classList.remove('is-recording');
+                        isRecording = false;
+                        recordBtn.innerText = "🔴 开始录制视频";
+                        recordBtn.style.background = "#cc0000";
+                        
+                        // 停止所有轨道（关闭浏览器顶部的录制红点）
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordBtn.innerText = "⏹ 停止录制 (或点击浏览器停止共享)";
+                    recordBtn.style.background = "#333";
+                    
+                    // 监听浏览器自带的“停止共享”条
+                    stream.getVideoTracks()[0].onended = () => {
+                        if (isRecording) mediaRecorder.stop();
+                    };
+
+                } catch (err) {
+                    console.error("Error: " + err);
+                    // 如果用户取消选择，也要恢复界面
+                    document.body.classList.remove('is-recording');
+                }
+            } else {
+                // 2. 手动停止录制
+                mediaRecorder.stop();
+            }
+        });
+
     </script>
-
 </body>
 </html>
