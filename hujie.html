@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手机区域蝴蝶录制</title>
+    <title>手机区域蝴蝶录制 (修复版)</title>
     <style>
         body {
             margin: 0;
@@ -17,89 +17,93 @@
             min-height: 100vh;
         }
 
-        /* --- 控制区 --- */
+        /* --- 初始控制区 --- */
         #controls {
             margin: 20px;
             z-index: 100;
             display: flex;
             gap: 15px;
+            align-items: center;
         }
 
         button {
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
-            background: #444;
-            color: #fff;
-            border: 1px solid #666;
             border-radius: 5px;
+            border: none;
             transition: 0.2s;
         }
-        button:hover { background: #666; }
-        button#recordBtn { background: #cc0000; border: none; font-weight: bold; }
-        button#recordBtn:hover { background: #ff0000; }
+
+        #startBtn { background: #4CAF50; color: white; font-weight: bold; }
+        #startBtn:hover { background: #45a049; }
+
+        /* --- 录制中显示的停止按钮 (默认隐藏) --- */
+        #stopBtn {
+            display: none; /* 初始隐藏 */
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #cc0000;
+            color: white;
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        #stopBtn:hover { background: #ff0000; }
 
         #download-link {
             display: none;
-            color: #4CAF50;
+            background: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
             font-weight: bold;
             margin-top: 10px;
+            z-index: 200;
         }
+        #download-link:hover { background: #0b7dda; }
 
         /* --- 手机屏幕容器 --- */
-        /* 这是一个模拟手机的容器，蝴蝶只能在这里飞 */
         #phone-screen {
-            width: 360px;   /* 手机宽度 */
-            height: 640px;  /* 手机高度 */
-            background: radial-gradient(circle at bottom, #1a1a2e 0%, #16213e 100%); /* 深邃夜空背景 */
+            width: 360px;
+            height: 640px;
+            background: radial-gradient(circle at bottom, #1a1a2e 0%, #16213e 100%);
             border: 10px solid #111;
-            border-radius: 30px; /* 圆角机身 */
+            border-radius: 30px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.8);
             position: relative;
-            overflow: hidden; /* 关键：蝴蝶飞出边界会被藏起来 */
-            cursor: crosshair; /* 提示这里可以交互 */
-            transition: all 0.3s ease;
+            overflow: hidden;
+            cursor: crosshair;
+            /* 居中处理 */
+            margin-top: 10px;
         }
         
-        /* 手机顶部的刘海/听筒装饰 */
+        /* 手机刘海 */
         #phone-screen::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 50%;
-            transform: translateX(-50%);
-            width: 120px; height: 25px;
-            background: #111;
-            border-bottom-left-radius: 15px;
-            border-bottom-right-radius: 15px;
-            z-index: 100;
+            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 25px; background: #111;
+            border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 100;
         }
 
-        /* --- 蝴蝶样式 (保持之前的漂亮设计) --- */
+        /* --- 蝴蝶样式 --- */
         #butterfly {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            left: 50%; top: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none; /* 让鼠标事件穿透蝴蝶，点到背景 */
-            z-index: 50;
+            position: absolute; width: 80px; height: 80px;
+            left: 50%; top: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 50;
             filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
         }
 
         .wing {
-            position: absolute;
-            width: 40px; height: 60px;
-            top: 5px;
+            position: absolute; width: 40px; height: 60px; top: 5px;
             background: linear-gradient(45deg, rgba(255, 0, 204, 0.9), rgba(0, 200, 255, 0.9));
             border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            transform-origin: bottom center;
-            mix-blend-mode: screen;
+            transform-origin: bottom center; mix-blend-mode: screen;
         }
         .wing::after {
-            content: ''; position: absolute;
-            top: 5px; left: 5px; right: 5px; bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
+            content: ''; position: absolute; top: 5px; left: 5px; right: 5px; bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 50%;
         }
 
         .left-wing { left: 0; transform: rotate(-30deg); animation: flap-left 0.15s infinite alternate ease-in-out; }
@@ -115,8 +119,7 @@
             border-radius: 10px; box-shadow: 0 0 5px #fff;
         }
         .antenna {
-            position: absolute; width: 1px; height: 15px; background: #fff; top: -10px; left: 50%;
-            opacity: 0.8; transform-origin: bottom;
+            position: absolute; width: 1px; height: 15px; background: #fff; top: -10px; left: 50%; opacity: 0.8; transform-origin: bottom;
         }
         .antenna.left { transform: translateX(-50%) rotate(-25deg); }
         .antenna.right { transform: translateX(-50%) rotate(25deg); }
@@ -127,25 +130,22 @@
         @keyframes flap-right-b { 0% { transform: rotateY(0deg) rotate(20deg) scaleX(-1); } 100% { transform: rotateY(60deg) rotate(20deg) scaleX(-1); } }
 
 
-        /* --- 录制模式样式 (关键！) --- */
-        /* 当 body 加上 is-recording 类时，隐藏所有多余元素，只居中显示手机 */
+        /* --- 录制模式状态 --- */
         body.is-recording {
-            background: #000; /* 录制时背景全黑 */
+            background: #000; /* 背景全黑 */
             justify-content: center;
-            height: 100vh;
             overflow: hidden;
         }
+        
+        /* 录制时隐藏开始按钮和下载链接 */
         body.is-recording #controls, 
         body.is-recording #download-link {
-            display: none !important; /* 隐藏按钮 */
+            display: none !important;
         }
-        body.is-recording #phone-screen {
-            border: none; /* 录制时如果不想看到手机边框，可以把这个去掉，或者保留 */
-            border-radius: 0; /* 变成直角，充满画面？或者保持手机样 */
-            /* 如果想要录制结果就是手机画面，建议保持原样居中，
-               或者你想让画面充满，可以解开下面这行注释： */
-            /* transform: scale(1.5); */ 
-            box-shadow: none;
+
+        /* 录制时显示停止按钮 */
+        body.is-recording #stopBtn {
+            display: block !important;
         }
 
     </style>
@@ -153,9 +153,13 @@
 <body>
 
     <div id="controls">
-        <button id="recordBtn">🔴 开始录制视频</button>
+        <button id="startBtn">🔴 开始录制视频</button>
+        <span style="font-size: 14px; color: #aaa;">(录制中按 ESC 键也可停止)</span>
     </div>
-    <a id="download-link" href="#">⬇ 下载视频</a>
+
+    <button id="stopBtn">⏹ 停止录制</button>
+
+    <a id="download-link" href="#">⬇ 点击下载视频</a>
 
     <div id="phone-screen">
         <div id="butterfly">
@@ -173,138 +177,123 @@
     <script>
         const phoneScreen = document.getElementById('phone-screen');
         const butterfly = document.getElementById('butterfly');
-        const recordBtn = document.getElementById('recordBtn');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
         const downloadLink = document.getElementById('download-link');
 
-        // --- 蝴蝶逻辑 ---
-        
-        // 蝴蝶在手机内的位置
-        let currentX = 180;
-        let currentY = 320;
-        // 目标位置
-        let targetX = 180;
-        let targetY = 320;
-        
+        // --- 蝴蝶跟随逻辑 ---
+        let currentX = 180, currentY = 320;
+        let targetX = 180, targetY = 320;
         let angle = 0;
 
-        // 监听整个文档的鼠标移动，但我们会把坐标转换限制在手机框内
         document.addEventListener('mousemove', (e) => {
-            // 获取手机屏幕相对于浏览器窗口的位置和大小
             const rect = phoneScreen.getBoundingClientRect();
-
-            // 计算鼠标相对于手机左上角的坐标
+            // 计算相对坐标并限制在手机范围内
             let relativeX = e.clientX - rect.left;
             let relativeY = e.clientY - rect.top;
-
-            // 限制（Clamp）坐标：不让蝴蝶飞出手机
-            // 比如：不能小于0，不能大于360
-            relativeX = Math.max(0, Math.min(relativeX, rect.width));
-            relativeY = Math.max(0, Math.min(relativeY, rect.height));
-
-            targetX = relativeX;
-            targetY = relativeY;
+            targetX = Math.max(0, Math.min(relativeX, rect.width));
+            targetY = Math.max(0, Math.min(relativeY, rect.height));
         });
 
-        function animateButterfly() {
-            // 缓动跟随算法
+        function animate() {
+            // 平滑跟随
             const dx = targetX - currentX;
             const dy = targetY - currentY;
-
-            // 速度系数 0.05，数值越小跟随越慢越平滑
             currentX += dx * 0.05;
             currentY += dy * 0.05;
 
-            // 角度计算 (让头朝向飞行方向)
+            // 转向计算
             if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-                // +90度是因为蝴蝶素材默认头朝上
                 const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-                // 角度平滑过渡
                 let angleDiff = targetAngle - angle;
-                // 处理 360/0 度突变问题
                 while (angleDiff > 180) angleDiff -= 360;
                 while (angleDiff < -180) angleDiff += 360;
-                
                 angle += angleDiff * 0.1;
             }
 
-            // 应用位置 (注意：这是相对于 #phone-screen 的绝对定位)
             butterfly.style.left = `${currentX}px`;
             butterfly.style.top = `${currentY}px`;
             butterfly.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-
-            requestAnimationFrame(animateButterfly);
+            requestAnimationFrame(animate);
         }
-        
-        // 启动蝴蝶
-        animateButterfly();
+        animate();
 
 
-        // --- 录制逻辑 (复用之前的技术) ---
-
+        // --- 录制逻辑 ---
         let mediaRecorder;
         let recordedChunks = [];
-        let isRecording = false;
+        let stream = null;
 
-        recordBtn.addEventListener('click', async () => {
-            if (!isRecording) {
-                // 1. 开始录制
-                try {
-                    // 请求录制当前标签页
-                    const stream = await navigator.mediaDevices.getDisplayMedia({
-                        video: { displaySurface: "browser" },
-                        audio: false
-                    });
+        // 1. 开始录制
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { displaySurface: "browser" },
+                    audio: false
+                });
 
-                    // 进入“录制模式”：添加 class，隐藏按钮，背景变黑，手机居中
-                    document.body.classList.add('is-recording');
-                    downloadLink.style.display = 'none';
+                // 界面进入录制模式
+                document.body.classList.add('is-recording');
+                downloadLink.style.display = 'none';
+                recordedChunks = [];
 
-                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
-                    
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) recordedChunks.push(e.data);
-                    };
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
 
-                    mediaRecorder.onstop = () => {
-                        // 停止后的处理
-                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                        const url = URL.createObjectURL(blob);
-                        downloadLink.href = url;
-                        downloadLink.download = 'butterfly_phone.webm';
-                        downloadLink.style.display = 'block';
-                        downloadLink.innerText = "✅ 录制完成，点击下载视频";
-                        
-                        // 退出录制模式，恢复界面
-                        document.body.classList.remove('is-recording');
-                        isRecording = false;
-                        recordBtn.innerText = "🔴 开始录制视频";
-                        recordBtn.style.background = "#cc0000";
-                        
-                        // 停止所有轨道（关闭浏览器顶部的录制红点）
-                        stream.getTracks().forEach(track => track.stop());
-                    };
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
 
-                    mediaRecorder.start();
-                    isRecording = true;
-                    recordBtn.innerText = "⏹ 停止录制 (或点击浏览器停止共享)";
-                    recordBtn.style.background = "#333";
-                    
-                    // 监听浏览器自带的“停止共享”条
-                    stream.getVideoTracks()[0].onended = () => {
-                        if (isRecording) mediaRecorder.stop();
-                    };
+                mediaRecorder.onstop = () => {
+                    saveRecording();
+                    resetUI();
+                };
 
-                } catch (err) {
-                    console.error("Error: " + err);
-                    // 如果用户取消选择，也要恢复界面
-                    document.body.classList.remove('is-recording');
-                }
-            } else {
-                // 2. 手动停止录制
+                mediaRecorder.start();
+
+                // 监听浏览器自带的停止条
+                stream.getVideoTracks()[0].onended = () => {
+                    if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                };
+
+            } catch (err) {
+                console.error("取消录制或出错:", err);
+                resetUI();
+            }
+        });
+
+        // 2. 停止录制 (点击按钮)
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
             }
         });
 
+        // 3. 停止录制 (按 ESC 键)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && document.body.classList.contains('is-recording')) {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+            }
+        });
+
+        // 保存文件
+        function saveRecording() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.download = `butterfly_recording_${new Date().getTime()}.webm`;
+            downloadLink.style.display = 'block';
+            downloadLink.innerText = "✅ 视频已生成，点击下载";
+        }
+
+        // 恢复界面
+        function resetUI() {
+            document.body.classList.remove('is-recording');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
     </script>
 </body>
 </html>
