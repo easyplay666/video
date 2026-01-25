@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学视频系统 v1.5.3 (声音修复版)</title>
+    <title>中法双语教学视频系统 v1.6 (在线语音版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -88,7 +88,7 @@
         <textarea id="multiInput">Il a dit : "Bonjour !"
 他说过：“《你好》！”</textarea>
     </div>
-    <div id="version-tag">Build: v1.5.3-SoundFix</div>
+    <div id="version-tag">Build: v1.6-OnlineAudio</div>
 </div>
 
 <div id="stage-viewport">
@@ -106,7 +106,8 @@
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载视频 (含声音)</a>
+<a id="download-link" href="#">⬇ 下载视频 (v1.6)</a>
+<audio id="audio-player" style="display:none;" crossorigin="anonymous"></audio>
 <canvas id="recording-canvas"></canvas>
 
 <script>
@@ -116,27 +117,7 @@
     const introScreen = document.getElementById('intro-screen');
     const stageTitle = document.getElementById('stage-title');
     const canvas = document.getElementById('recording-canvas');
-
-    let allVoices = [];
-    window.speechSynthesis.onvoiceschanged = () => { allVoices = window.speechSynthesis.getVoices(); };
-
-    // --- 音频保活机制 (解决录制时声音中断问题) ---
-    let audioContext = null;
-    function startAudioKeepAlive() {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        // 创建一个听不见的振荡器 (极低频 0.1Hz)
-        // 它的作用是强迫浏览器的音频处理线程一直工作，从而被录制下来
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.frequency.value = 0.1; 
-        gain.gain.value = 0.01; // 极低音量
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.start();
-        console.log("Audio Keep-Alive Started");
-    }
+    const audioPlayer = document.getElementById('audio-player');
 
     function setMode(mode) {
         stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
@@ -156,18 +137,46 @@
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
     function cleanTextForSpeech(text) { return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' '); }
 
-    function getBestVoice(langCode) {
-        if (allVoices.length === 0) allVoices = window.speechSynthesis.getVoices();
-        const preferred = allVoices.find(v => v.lang === langCode && (v.name.includes("Google") || v.name.includes("Microsoft") || v.name.includes("Premium")));
-        return preferred || allVoices.find(v => v.lang.startsWith(langCode.split('-')[0])) || null;
+    // --- 核心改变：使用在线 TTS API 生成 MP3 ---
+    // 这将把朗读变成“播放音乐”，从而保证录制器能听到声音
+    async function playOnlineTTS(text) {
+        return new Promise((resolve, reject) => {
+            if (!text || text.trim().length === 0) {
+                resolve();
+                return;
+            }
+
+            const cleanText = cleanTextForSpeech(text);
+            const lang = isChinese(text) ? 'zh-CN' : 'fr'; // Google 语言代码
+            
+            // 使用 Google Translate TTS 接口 (免费、稳定、音质好)
+            // client=tw-ob 是公开访问的密钥
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${lang}&client=tw-ob`;
+
+            audioPlayer.src = url;
+            audioPlayer.volume = 1.0;
+            
+            // 监听播放结束
+            audioPlayer.onended = () => {
+                resolve();
+            };
+            
+            // 监听错误 (比如没网)
+            audioPlayer.onerror = (e) => {
+                console.warn("TTS Error:", e);
+                // 就算出错也不要卡死程序，直接跳过
+                resolve(); 
+            };
+
+            // 开始播放
+            audioPlayer.play().catch(e => {
+                console.warn("Auto-play blocked:", e);
+                resolve();
+            });
+        });
     }
 
     async function startProcess() {
-        allVoices = window.speechSynthesis.getVoices();
-
-        // 1. 启动音频保活
-        startAudioKeepAlive();
-
         const titleText = document.getElementById('titleInput').value;
         const rawText = document.getElementById('multiInput').value;
         const paragraphs = rawText.split('\n').filter(p => p.trim());
@@ -200,25 +209,28 @@
         const ctx = canvas.getContext('2d');
 
         try {
-            const confirmMsg = "【关键步骤】\n\n1. 请在弹窗顶部点击 '此标签页' (This Tab)\n2. 务必勾选左下角的 '分享标签页音频' (Share tab audio)\n\n如果选错或没勾选，视频将没有声音！";
+            const confirmMsg = "【最后一步确认】\n\n1. 请在弹窗顶部点击 '此标签页' (This Tab)\n2. 务必勾选左下角的 '分享标签页音频' (Share tab audio)\n\n这次一定会成功！";
             if(!confirm(confirmMsg)) return;
 
+            // 必须请求视频+音频，才能把标签页的声音捕捉进来
             const systemStream = await navigator.mediaDevices.getDisplayMedia({ 
                 video: { displaySurface: "browser" }, 
-                audio: { echoCancellation: false, noiseSuppression: false }, // 禁用降噪以保证音质
+                audio: true,
                 preferCurrentTab: true 
             });
 
-            // 严格检查音频轨道
+            // 检查音频轨道
             const audioTrack = systemStream.getAudioTracks()[0];
             if (!audioTrack) {
-                alert("❌ 失败：你忘记勾选'分享音频'了！\n请刷新页面重试，并务必勾选左下角的音频框。");
+                alert("❌ 依然没有勾选音频！\n请刷新重试，务必勾选左下角的小框框。");
                 systemStream.getTracks().forEach(t => t.stop());
                 return;
             }
 
             const canvasStream = canvas.captureStream(30);
             const videoTrack = canvasStream.getVideoTracks()[0];
+            
+            // 混合 Canvas 画面 和 系统捕获的音频
             const combinedStream = new MediaStream([videoTrack, audioTrack]);
 
             const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9' });
@@ -229,17 +241,17 @@
                 const url = URL.createObjectURL(blob);
                 const dlBtn = document.getElementById('download-link');
                 dlBtn.href = url;
-                dlBtn.download = `Lesson_${new Date().getTime()}.webm`;
+                dlBtn.download = `Lesson_v1.6_${new Date().getTime()}.webm`;
                 dlBtn.style.display = 'block';
-                dlBtn.innerText = "✅ 录制成功，点击保存视频";
+                dlBtn.innerText = "✅ 录制完成，点击下载";
                 
                 systemStream.getTracks().forEach(t => t.stop());
                 canvasStream.getTracks().forEach(t => t.stop());
-                if (audioContext) audioContext.close(); audioContext = null;
             };
 
             recorder.start();
 
+            // 渲染循环
             const renderLoop = async () => {
                 if (recorder.state === "recording") {
                     const canvasData = await html2canvas(stage, {
@@ -256,34 +268,25 @@
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
-            const speak = (text) => {
-                return new Promise((resolve) => {
-                    const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-                    const isZh = isChinese(text);
-                    const bestVoice = getBestVoice(isZh ? 'zh-CN' : 'fr-FR');
-                    if (bestVoice) utterance.voice = bestVoice;
-                    
-                    utterance.rate = isZh ? 0.9 : 0.8; 
-                    utterance.onend = resolve;
-                    utterance.onerror = resolve; 
-                    window.speechSynthesis.speak(utterance);
-                });
-            };
-
+            // 播放标题
             if (titleText) {
                 stageTitle.classList.add('active');
-                await speak(titleText);
+                await playOnlineTTS(titleText); // 这里的函数变了
                 await new Promise(r => setTimeout(r, 600));
                 stageTitle.classList.remove('active');
             }
 
+            // 播放正文
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 const offsetTop = data.element.offsetTop;
                 scrollContent.scrollTo({ top: offsetTop - scrollContent.offsetHeight / 2, behavior: 'smooth' });
                 
-                if (data.shouldRead) await speak(data.text);
-                else await new Promise(r => setTimeout(r, 600));
+                if (data.shouldRead) {
+                    await playOnlineTTS(data.text); // 使用在线播放
+                } else {
+                    await new Promise(r => setTimeout(r, 600));
+                }
                 
                 await new Promise(r => setTimeout(r, 400));
                 data.element.classList.remove('active');
