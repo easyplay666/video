@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>中法双语教学视频系统 v1.5.2-AudioPro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --yt-red: #cc0000; --paper-bg: #fdfaf3; 
+            --soft-green: #e9f5db; --soft-pink: #fce4ec; 
+            --border-color: #adc178; --zh-color: #333; --fr-color: #2c5d63;
+        }
+        
+        body { font-family: "Georgia", "PingFang SC", serif; background: #1a1a1a; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+        
+        #ui-controls { background: #333; padding: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 3000; position: relative;}
+        .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
+        .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
+        #titleInput, textarea { padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
+        #startBtn { padding: 10px 30px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 4px; font-weight: bold; }
+
+        /* 数值显示样式 */
+        .value-display { color: #fdbb2d; font-weight: bold; min-width: 35px; text-align: center; }
+
+        #version-tag { position: absolute; bottom: 5px; right: 10px; font-size: 10px; color: #777; font-family: monospace; }
+
+        #stage-viewport { margin: 20px auto; background: #000; overflow: hidden; display: flex; justify-content: center; border: 2px solid #555; }
+        #recording-stage { background-color: var(--paper-bg); position: relative; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; z-index: 1; }
+
+        .mode-youtube { width: 854px; height: 480px; }
+        .mode-mobile { width: 360px; height: 640px; }
+
+        #frame-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; border: 20px solid transparent; border-image: linear-gradient(135deg, var(--soft-green), var(--soft-pink)) 30; }
+        .corner-mark { position: absolute; width: 45px; height: 45px; border: 3px solid var(--border-color); z-index: 60; }
+        .tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+        .br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+
+        #intro-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #1a2a6c); background-size: 400% 400%; animation: gradientBG 6s ease infinite; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: transform 0.8s ease-in-out; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        #intro-screen.hidden { transform: translateY(-100%); }
+
+        #fixed-header { width: 100%; padding: 45px 55px 15px 55px; box-sizing: border-box; z-index: 40; text-align: center; border-bottom: 1px solid rgba(173,193,120,0.2); }
+        #stage-title { font-size: 26px; font-weight: bold; color: var(--zh-color); display: inline-block; padding: 4px 12px; }
+        #stage-title.active { color: var(--yt-red); background: rgba(240, 98, 146, 0.12); border-radius: 6px; }
+
+        #scroll-content { flex: 1; width: 100%; padding: 10px 55px 60px 55px; box-sizing: border-box; overflow-y: hidden; z-index: 10; }
+        #content-list { background-image: linear-gradient(rgba(173, 193, 120, 0.15) 1px, transparent 1px); background-size: 100% 40px; line-height: 1.6; }
+        .paragraph-block { transition: margin-bottom 0.2s ease; }
+        .sentence-unit { display: inline; transition: 0.3s; padding: 0 4px; }
+        .lang-fr { color: var(--fr-color); font-style: italic; }
+        .lang-zh { color: var(--zh-color); font-weight: 500; }
+        .sentence-unit.active { color: var(--yt-red) !important; font-weight: bold; background: rgba(240, 98, 146, 0.15); }
+
+        #download-link { position: fixed; top: 20px; right: 20px; background: #27ae60; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: none; z-index: 4000; }
+        #recording-canvas { display: none; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div id="ui-controls">
+    <div class="controls-row">
+        <button onclick="setMode('youtube')">16:9 (YouTube)</button>
+        <button onclick="setMode('mobile')">9:16 (手机竖屏)</button>
+        
+        <div class="setting-item">
+            <span>字体:</span>
+            <input type="range" id="fontSizeInput" min="12" max="40" value="24" oninput="applyStyles()">
+            <span id="fontSizeVal" class="value-display">24px</span>
+        </div>
+        
+        <div class="setting-item">
+            <span>间距:</span>
+            <input type="range" id="paraMarginInput" min="0" max="80" value="25" oninput="applyStyles()">
+            <span id="paraMarginVal" class="value-display">25px</span>
+        </div>
+
+        <div class="setting-item">
+            <span>阅读:</span>
+            <label><input type="radio" name="readMode" value="all" checked> 全部</label>
+            <label><input type="radio" name="readMode" value="fr"> 仅法</label>
+            <label><input type="radio" name="readMode" value="zh"> 仅中</label>
+        </div>
+        <button id="startBtn">开始录制 (请勾选分享音频)</button>
+    </div>
+    <div class="input-group">
+        <input type="text" id="titleInput" value="中文法语学习（中法双语）">
+        <textarea id="multiInput">Il a dit : "Bonjour !"
+他说过：“《你好》！”</textarea>
+    </div>
+    <div id="version-tag">Build: v1.5.2-AudioPro</div>
+</div>
+
+<div id="stage-viewport">
+    <div id="recording-stage" class="mode-youtube">
+        <div id="frame-overlay"></div>
+        <div class="corner-mark tl"></div><div class="corner-mark br"></div>
+        <div id="intro-screen">
+            <div style="text-align: center;">
+                <span style="font-family: 'Cinzel', serif; font-size: 34px; color: #fff; display: block;">ÉTUDE DU FRANÇAIS</span>
+                <span style="font-family: 'ZCOOL KuaiLe', cursive; font-size: 42px; color: #fdbb2d; display: block;">中文法语学习</span>
+            </div>
+        </div>
+        <div id="fixed-header"><div id="stage-title"></div></div>
+        <div id="scroll-content"><div id="content-list"></div></div>
+    </div>
+</div>
+
+<a id="download-link" href="#">⬇ 下载系统内录视频 (v1.5.2)</a>
+<canvas id="recording-canvas"></canvas>
+
+<script>
+    const stage = document.getElementById('recording-stage');
+    const scrollContent = document.getElementById('scroll-content');
+    const contentList = document.getElementById('content-list');
+    const introScreen = document.getElementById('intro-screen');
+    const stageTitle = document.getElementById('stage-title');
+    const canvas = document.getElementById('recording-canvas');
+
+    // 预加载语音库，防止首次点击没有声音
+    let allVoices = [];
+    window.speechSynthesis.onvoiceschanged = () => {
+        allVoices = window.speechSynthesis.getVoices();
+    };
+
+    function setMode(mode) {
+        stage.className = mode === 'youtube' ? 'mode-youtube' : 'mode-mobile';
+    }
+
+    function applyStyles() {
+        const fs = document.getElementById('fontSizeInput').value;
+        const pm = document.getElementById('paraMarginInput').value;
+        document.getElementById('fontSizeVal').innerText = fs + 'px';
+        document.getElementById('paraMarginVal').innerText = pm + 'px';
+        contentList.style.fontSize = fs + 'px';
+        const blocks = document.querySelectorAll('.paragraph-block');
+        blocks.forEach(b => b.style.marginBottom = pm + 'px');
+        contentList.style.backgroundSize = `100% ${fs * 1.6}px`;
+    }
+
+    function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
+
+    function cleanTextForSpeech(text) {
+        const pattern = /["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g;
+        return text.replace(pattern, ' ');
+    }
+
+    // --- 核心优化：获取高质量语音 ---
+    function getBestVoice(langCode) {
+        // 尝试重新获取（如果之前没加载到）
+        if (allVoices.length === 0) allVoices = window.speechSynthesis.getVoices();
+
+        // 优先寻找 Google, Microsoft 或 Apple 的高质量语音
+        const preferred = allVoices.find(v => v.lang === langCode && (v.name.includes("Google") || v.name.includes("Microsoft") || v.name.includes("Siri") || v.name.includes("Premium")));
+        
+        // 如果找不到特定的，找任何匹配语言的
+        const backup = allVoices.find(v => v.lang.startsWith(langCode.split('-')[0])); // 匹配 'fr' 或 'zh'
+        
+        return preferred || backup || null;
+    }
+
+    async function startProcess() {
+        // 强制刷新语音列表
+        allVoices = window.speechSynthesis.getVoices();
+
+        const titleText = document.getElementById('titleInput').value;
+        const rawText = document.getElementById('multiInput').value;
+        const paragraphs = rawText.split('\n').filter(p => p.trim());
+        const readMode = document.querySelector('input[name="readMode"]:checked').value;
+        const currentMargin = document.getElementById('paraMarginInput').value + 'px';
+        
+        stageTitle.innerText = titleText;
+        contentList.innerHTML = '';
+        const allSentenceData = [];
+
+        paragraphs.forEach(pText => {
+            const pWrapper = document.createElement('div');
+            pWrapper.className = 'paragraph-block';
+            pWrapper.style.marginBottom = currentMargin;
+            const sentences = pText.match(/[^.!?。！？]+[.!?。！？]*/g) || [pText];
+            sentences.forEach(sText => {
+                const span = document.createElement('span');
+                const isZh = isChinese(sText);
+                span.className = `sentence-unit ${isZh ? 'lang-zh' : 'lang-fr'}`;
+                span.innerText = sText + " ";
+                pWrapper.appendChild(span);
+                let shouldRead = (readMode === 'all') || (readMode === 'fr' && !isZh) || (readMode === 'zh' && isZh);
+                allSentenceData.push({ element: span, text: sText, shouldRead: shouldRead });
+            });
+            contentList.appendChild(pWrapper);
+        });
+
+        canvas.width = stage.offsetWidth;
+        canvas.height = stage.offsetHeight;
+        const ctx = canvas.getContext('2d');
+
+        try {
+            // --- 核心修改：使用 getDisplayMedia 捕获系统内录声音 ---
+            alert("【重要提示】\n\n请在接下来的弹窗中：\n1. 选择 '此标签页 (This Tab)'\n2. 务必勾选底部的 '分享标签页音频 (Share tab audio)'\n\n否则录像将没有声音！");
+            
+            const systemStream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: true, // 必须请求视频才能拿到标签页的音频
+                audio: true, // 请求音频
+                preferCurrentTab: true // 提示浏览器优先选当前页
+            });
+
+            // 从系统流中提取音频轨道 (System Audio)
+            const audioTrack = systemStream.getAudioTracks()[0];
+            
+            if (!audioTrack) {
+                alert("错误：未检测到音频！请确保勾选了'分享标签页音频'。");
+                systemStream.getTracks().forEach(t => t.stop());
+                return;
+            }
+
+            // 从 Canvas 获取视频流 (保持原有的高清渲染逻辑)
+            const canvasStream = canvas.captureStream(30);
+            const videoTrack = canvasStream.getVideoTracks()[0];
+
+            // 合并：Canvas的画面 + 系统的声音
+            const combinedStream = new MediaStream([videoTrack, audioTrack]);
+
+            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9' });
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                document.getElementById('download-link').href = URL.createObjectURL(blob);
+                document.getElementById('download-link').style.display = 'block';
+                document.getElementById('download-link').innerText = "✅ 录制完成，点击下载";
+                // 停止所有轨道
+                systemStream.getTracks().forEach(t => t.stop());
+                canvasStream.getTracks().forEach(t => t.stop());
+            };
+
+            recorder.start();
+
+            // 渲染循环
+            const renderLoop = async () => {
+                if (recorder.state === "recording") {
+                    const canvasData = await html2canvas(stage, {
+                        scale: 1, width: canvas.width, height: canvas.height, backgroundColor: null, logging: false
+                    });
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(canvasData, 0, 0);
+                    requestAnimationFrame(renderLoop);
+                }
+            };
+            renderLoop();
+
+            // 开始播放流程
+            await new Promise(r => setTimeout(r, 3500));
+            introScreen.classList.add('hidden');
+            await new Promise(r => setTimeout(r, 800));
+
+            // --- 优化后的朗读函数 ---
+            const speak = (text) => {
+                return new Promise((resolve) => {
+                    const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
+                    const isZh = isChinese(text);
+                    
+                    // 自动选择最佳声音
+                    const bestVoice = getBestVoice(isZh ? 'zh-CN' : 'fr-FR');
+                    if (bestVoice) utterance.voice = bestVoice;
+
+                    // 微调声调和语速，使其更自然
+                    utterance.rate = isZh ? 0.9 : 0.8; // 法语稍微慢一点更清晰
+                    utterance.pitch = 1.0; 
+
+                    utterance.onend = resolve;
+                    // 如果出错也继续，防止卡死
+                    utterance.onerror = resolve; 
+                    
+                    window.speechSynthesis.speak(utterance);
+                });
+            };
+
+            if (titleText) {
+                stageTitle.classList.add('active');
+                await speak(titleText);
+                await new Promise(r => setTimeout(r, 600));
+                stageTitle.classList.remove('active');
+            }
+
+            for (let data of allSentenceData) {
+                data.element.classList.add('active');
+                const offsetTop = data.element.offsetTop;
+                scrollContent.scrollTo({ top: offsetTop - scrollContent.offsetHeight / 2, behavior: 'smooth' });
+                
+                if (data.shouldRead) await speak(data.text);
+                else await new Promise(r => setTimeout(r, 600));
+                
+                await new Promise(r => setTimeout(r, 400));
+                data.element.classList.remove('active');
+            }
+
+            await new Promise(r => setTimeout(r, 1000));
+            recorder.stop();
+
+        } catch (err) {
+            console.error(err);
+            alert("录制取消或发生错误：" + err.message);
+        }
+    }
+
+    applyStyles();
+    document.getElementById('startBtn').addEventListener('click', startProcess);
+</script>
+
+</body>
+</html>
