@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>中法双语教学视频系统 v1.6 (在线语音版)</title>
+    <title>中法双语教学视频系统 v1.7 (稳定音频版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -18,8 +18,8 @@
         .setting-item { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #444; padding: 5px 12px; border-radius: 20px; }
         .input-group { width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 8px; }
         #titleInput, textarea { padding: 10px; border-radius: 4px; border: none; font-size: 14px; }
-        #startBtn { padding: 10px 30px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; box-shadow: 0 4px 10px rgba(204,0,0,0.3); }
-        #startBtn:hover { background: #ff0000; }
+        #startBtn { padding: 10px 30px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 4px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #startBtn:hover { background: #2ecc71; }
 
         .value-display { color: #fdbb2d; font-weight: bold; min-width: 35px; text-align: center; }
         #version-tag { position: absolute; bottom: 5px; right: 10px; font-size: 10px; color: #777; font-family: monospace; }
@@ -88,7 +88,7 @@
         <textarea id="multiInput">Il a dit : "Bonjour !"
 他说过：“《你好》！”</textarea>
     </div>
-    <div id="version-tag">Build: v1.6-OnlineAudio</div>
+    <div id="version-tag">Build: v1.7-Stable</div>
 </div>
 
 <div id="stage-viewport">
@@ -106,7 +106,7 @@
     </div>
 </div>
 
-<a id="download-link" href="#">⬇ 下载视频 (v1.6)</a>
+<a id="download-link" href="#">⬇ 下载视频 (v1.7)</a>
 <audio id="audio-player" style="display:none;" crossorigin="anonymous"></audio>
 <canvas id="recording-canvas"></canvas>
 
@@ -137,43 +137,62 @@
     function isChinese(text) { return /[\u4e00-\u9fa5]/.test(text); }
     function cleanTextForSpeech(text) { return text.replace(/["'“”‘’《》<>〈〉()（）\[\]【】—\-\-\-#*~:：]/g, ' '); }
 
-    // --- 核心改变：使用在线 TTS API 生成 MP3 ---
-    // 这将把朗读变成“播放音乐”，从而保证录制器能听到声音
-    async function playOnlineTTS(text) {
-        return new Promise((resolve, reject) => {
+    // --- 核心修复：使用更稳定的有道 API ---
+    // 这是一个公开的 MP3 接口，允许跨域，录制器能完美捕获
+    async function playSmartTTS(text) {
+        return new Promise((resolve) => {
             if (!text || text.trim().length === 0) {
-                resolve();
-                return;
+                resolve(); return;
             }
 
             const cleanText = cleanTextForSpeech(text);
-            const lang = isChinese(text) ? 'zh-CN' : 'fr'; // Google 语言代码
+            const isZh = isChinese(text);
             
-            // 使用 Google Translate TTS 接口 (免费、稳定、音质好)
-            // client=tw-ob 是公开访问的密钥
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${lang}&client=tw-ob`;
+            // 策略 A: 尝试在线 MP3 (优先，因为能被录制)
+            // Youdao API: le=fr (法语) / le=zh (中文)
+            const langCode = isZh ? 'zh' : 'fr';
+            const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(cleanText)}&le=${langCode}`;
+
+            let hasResolved = false;
+
+            // 设置超时机制 (防止网络卡住导致无限等待)
+            const timeoutID = setTimeout(() => {
+                if(!hasResolved) {
+                    console.warn("Online TTS timed out, fallback to native.");
+                    fallbackToNative(text, resolve);
+                }
+            }, 5000); // 5秒加载不出来就切本地
 
             audioPlayer.src = url;
             audioPlayer.volume = 1.0;
             
-            // 监听播放结束
             audioPlayer.onended = () => {
-                resolve();
+                clearTimeout(timeoutID);
+                if(!hasResolved) { hasResolved = true; resolve(); }
             };
             
-            // 监听错误 (比如没网)
             audioPlayer.onerror = (e) => {
-                console.warn("TTS Error:", e);
-                // 就算出错也不要卡死程序，直接跳过
-                resolve(); 
+                clearTimeout(timeoutID);
+                console.warn("Online TTS failed, switching to native:", e);
+                // 策略 B: 在线失败，回退到本地 (起码能听见)
+                if(!hasResolved) fallbackToNative(text, resolve);
             };
 
-            // 开始播放
             audioPlayer.play().catch(e => {
-                console.warn("Auto-play blocked:", e);
-                resolve();
+                console.warn("Autoplay blocked/failed:", e);
+                if(!hasResolved) fallbackToNative(text, resolve);
             });
         });
+    }
+
+    // 备用方案：浏览器原生发音
+    function fallbackToNative(text, doneCallback) {
+        const u = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
+        u.lang = isChinese(text) ? 'zh-CN' : 'fr-FR';
+        u.rate = 0.85;
+        u.onend = () => { doneCallback(); };
+        u.onerror = () => { doneCallback(); }; // 出错也继续
+        window.speechSynthesis.speak(u);
     }
 
     async function startProcess() {
@@ -209,28 +228,24 @@
         const ctx = canvas.getContext('2d');
 
         try {
-            const confirmMsg = "【最后一步确认】\n\n1. 请在弹窗顶部点击 '此标签页' (This Tab)\n2. 务必勾选左下角的 '分享标签页音频' (Share tab audio)\n\n这次一定会成功！";
+            const confirmMsg = "【最后确认】\n\n1. 请选择 '此标签页' (This Tab)\n2. 务必勾选左下角的 '分享标签页音频' (Share tab audio)\n\n准备好了吗？";
             if(!confirm(confirmMsg)) return;
 
-            // 必须请求视频+音频，才能把标签页的声音捕捉进来
             const systemStream = await navigator.mediaDevices.getDisplayMedia({ 
                 video: { displaySurface: "browser" }, 
                 audio: true,
                 preferCurrentTab: true 
             });
 
-            // 检查音频轨道
             const audioTrack = systemStream.getAudioTracks()[0];
             if (!audioTrack) {
-                alert("❌ 依然没有勾选音频！\n请刷新重试，务必勾选左下角的小框框。");
+                alert("❌ 失败：未检测到音频！请刷新重试并勾选音频框。");
                 systemStream.getTracks().forEach(t => t.stop());
                 return;
             }
 
             const canvasStream = canvas.captureStream(30);
             const videoTrack = canvasStream.getVideoTracks()[0];
-            
-            // 混合 Canvas 画面 和 系统捕获的音频
             const combinedStream = new MediaStream([videoTrack, audioTrack]);
 
             const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9' });
@@ -241,17 +256,15 @@
                 const url = URL.createObjectURL(blob);
                 const dlBtn = document.getElementById('download-link');
                 dlBtn.href = url;
-                dlBtn.download = `Lesson_v1.6_${new Date().getTime()}.webm`;
+                dlBtn.download = `Lesson_v1.7_${new Date().getTime()}.webm`;
                 dlBtn.style.display = 'block';
                 dlBtn.innerText = "✅ 录制完成，点击下载";
-                
                 systemStream.getTracks().forEach(t => t.stop());
                 canvasStream.getTracks().forEach(t => t.stop());
             };
 
             recorder.start();
 
-            // 渲染循环
             const renderLoop = async () => {
                 if (recorder.state === "recording") {
                     const canvasData = await html2canvas(stage, {
@@ -268,22 +281,22 @@
             introScreen.classList.add('hidden');
             await new Promise(r => setTimeout(r, 800));
 
-            // 播放标题
+            // 标题
             if (titleText) {
                 stageTitle.classList.add('active');
-                await playOnlineTTS(titleText); // 这里的函数变了
+                await playSmartTTS(titleText);
                 await new Promise(r => setTimeout(r, 600));
                 stageTitle.classList.remove('active');
             }
 
-            // 播放正文
+            // 正文
             for (let data of allSentenceData) {
                 data.element.classList.add('active');
                 const offsetTop = data.element.offsetTop;
                 scrollContent.scrollTo({ top: offsetTop - scrollContent.offsetHeight / 2, behavior: 'smooth' });
                 
                 if (data.shouldRead) {
-                    await playOnlineTTS(data.text); // 使用在线播放
+                    await playSmartTTS(data.text);
                 } else {
                     await new Promise(r => setTimeout(r, 600));
                 }
